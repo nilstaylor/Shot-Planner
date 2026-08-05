@@ -1603,6 +1603,22 @@ export default function BlockingBoard() {
     drag.current = null;
   };
 
+  const toggleWallTool = () => {
+    if (wallTool === "wall") {
+      setWallTool("select");
+      setWallDraft(null);
+      setWallHover(null);
+      return;
+    }
+    setSelected(null);
+    setSelectedWall(null);
+    setSelectedOpening(null);
+    setWallDraft(null);
+    setWallHover(null);
+    setWallTool("wall");
+    setPane("setdesign");
+  };
+
   /* ---- adding things ---- */
 
   const centerOfView = () => ({
@@ -2198,13 +2214,13 @@ ${previs}
           Director: {cinematographyDisplay === "ghost" ? "ghost" : "hide"} cinema
         </Btn>
         <Btn
-          onClick={() => {
-            setPane("setdesign");
-            setWallTool("wall");
-          }}
+          onClick={toggleWallTool}
           active={wallTool === "wall"}
+          aria-pressed={wallTool === "wall"}
+          title={wallTool === "wall" ? "Turn off Wall Tool and discard the unfinished wall segment" : "Turn on Wall Tool"}
+          data-testid="button-wall-tool"
         >
-          Wall tool
+          Wall tool: {wallTool === "wall" ? "on" : "off"}
         </Btn>
         <Btn
           onClick={() => changeLine((l) => ({ ...l, on: !l.on }))}
@@ -3210,8 +3226,14 @@ ${previs}
                   <Btn onClick={() => { setWallTool("select"); setWallDraft(null); }} active={wallTool === "select"}>
                     Select / edit
                   </Btn>
-                  <Btn onClick={() => setWallTool("wall")} active={wallTool === "wall"} accent>
-                    Draw walls
+                  <Btn
+                    onClick={toggleWallTool}
+                    active={wallTool === "wall"}
+                    accent
+                    aria-pressed={wallTool === "wall"}
+                    data-testid="button-draw-walls"
+                  >
+                    Draw walls: {wallTool === "wall" ? "on" : "off"}
                   </Btn>
                   <Btn onClick={() => { setWallTool("door"); setWallDraft(null); }} active={wallTool === "door"}>
                     Add door
