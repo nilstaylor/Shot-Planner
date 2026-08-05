@@ -7,16 +7,28 @@ Shot Planner is a top-down camera blocking and shot-planning tool for film direc
 ## Features
 
 - One-foot floor-plan grid with pan and zoom
+- Integrated Set Designer with point-to-point wall chains, editable vertices, midpoint translation, and midpoint extrusion
+- Grid, node, wall-line, and 45° / 90° architectural angle snapping for fast, connected floor plans
+- Solid, outlined, or translucent wall treatments that remain readable beneath blocking and FOV guides
+- Smart hosted doors, windows, and pass-throughs that cut their aperture automatically, slide along a wall, and stay attached as walls change
+- Door swing and hinge controls, resizable openings, and blueprint/location-photo underlays for trace-over workflows
 - Draggable, rotatable performers, cameras, and set pieces
 - Step-by-step undo with `Cmd+Z` or `Ctrl+Z`
 - Per-camera shot color and field-of-view controls
-- Lens, sensor, height, movement, support, subject, and timing controls
+- Cinematography Layer System with Director and Cinematography modes, per-object visibility/lock controls, and ghost or hard-hide staging passes
+- Backward-compatible scene migration: legacy JSON projects load their existing objects into the Director layer automatically
+- Context-aware stencil palette with camera rigs, lighting, grip, dolly-track, diffusion, and truss assets exposed in Cinematography mode
+- Lens, sensor, height, movement, support, subject, and optional user-entered planning-minute controls
 - Automatic shot-size and camera-angle descriptions
+- Clickable camera setups with an orbitable 3D previs window
+- Dedicated top-bar 3D preview control, enabled as soon as a camera is added
+- Generic male/female performer representations and dimensional set-object proxies
+- High-, low-, and eye-level previs framing based on the camera height
 - Optional 180-degree line and crossed-line warnings
 - 500+ scaled production stencils
 - Scene save/open using JSON
 - Shot-list export to CSV
-- Printable landscape shot list
+- Printable landscape shot list with optional 3D previs frames for PDF export
 - Responsive desktop, tablet, and mobile layouts
 
 ## Requirements
@@ -67,6 +79,8 @@ npm test
 ## Project structure
 
 - `app/BlockingBoard.jsx` — main application and interaction logic
+- `app/layerSystem.js` — layer migration, render-policy, and stencil-availability rules
+- `app/PrevisWindow.jsx` — interactive Three.js / canvas previs renderer
 - `app/page.tsx` — application entry page
 - `app/layout.tsx` — document shell, fonts, and metadata
 - `app/globals.css` — global styles

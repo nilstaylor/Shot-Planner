@@ -1,4 +1,15 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import PrevisWindow, { renderPrevisFrame } from "./PrevisWindow";
+import {
+  CINEMATOGRAPHY,
+  DIRECTOR,
+  LAYER_SCHEMA_VERSION,
+  migrateSceneDocument,
+  normalizeLayerContext,
+  resolveLayerPresentation,
+  stencilIsAvailableInMode,
+  withLayerDefaults,
+} from "./layerSystem";
 
 /* ============================================================
    BLOCKING BOARD
@@ -132,6 +143,86 @@ const FALLBACK_STENCILS = [
   },
 ];
 
+const TECHNICAL_STENCILS = [
+  {
+    id: "cinema/camera-rig",
+    name: "Cinema camera rig",
+    category: "Camera rigs",
+    targetMode: CINEMATOGRAPHY,
+    technicalFamily: "CAMERA",
+    searchTags: ["camera", "rig", "fov", "tripod"],
+    w: 3.2,
+    d: 2.3,
+    tint: "light",
+    file: stencilArt(`<rect x="12" y="34" width="76" height="38" rx="8"/><circle cx="50" cy="53" r="13"/><path d="M24 73l-9 17M50 73v17M76 73l9 17M88 44h9"/>`),
+  },
+  {
+    id: "cinema/led-panel",
+    name: "LED panel",
+    category: "Lighting",
+    targetMode: CINEMATOGRAPHY,
+    technicalFamily: "LIGHTING",
+    searchTags: ["light", "led", "panel", "key", "fill"],
+    w: 2.5,
+    d: 1.2,
+    tint: "light",
+    file: stencilArt(`<rect x="16" y="20" width="68" height="40" rx="3"/><path d="M50 60v24M32 84h36"/>`),
+  },
+  {
+    id: "cinema/c-stand",
+    name: "C-stand",
+    category: "Grip",
+    targetMode: CINEMATOGRAPHY,
+    technicalFamily: "GRIP",
+    searchTags: ["c-stand", "grip", "stand", "flag"],
+    w: 2,
+    d: 2,
+    tint: "light",
+    file: stencilArt(`<path d="M50 8v74M24 92h52M33 82l-16 10M67 82l16 10M50 26h33M83 18v16"/>`),
+  },
+  {
+    id: "cinema/dolly-track",
+    name: "Dolly track",
+    category: "Movement",
+    targetMode: CINEMATOGRAPHY,
+    technicalFamily: "MOVEMENT",
+    searchTags: ["dolly", "track", "move", "camera"],
+    w: 8,
+    d: 1.8,
+    tint: "light",
+    file: stencilArt(`<path d="M10 30h80M10 70h80M20 22v56M40 22v56M60 22v56M80 22v56"/>`),
+  },
+  {
+    id: "cinema/diffusion",
+    name: "Diffusion frame",
+    category: "Grip",
+    targetMode: CINEMATOGRAPHY,
+    technicalFamily: "GRIP",
+    searchTags: ["diffusion", "silk", "frame", "grip"],
+    w: 5,
+    d: 0.4,
+    tint: "light",
+    file: stencilArt(`<rect x="10" y="14" width="80" height="56"/><path d="M10 14l80 56M90 14L10 70M26 70v20M74 70v20"/>`),
+  },
+  {
+    id: "cinema/truss",
+    name: "Truss",
+    category: "Rigging",
+    targetMode: CINEMATOGRAPHY,
+    technicalFamily: "RIGGING",
+    searchTags: ["truss", "rigging", "overhead", "grid"],
+    w: 8,
+    d: 1,
+    tint: "light",
+    file: stencilArt(`<path d="M8 24h84M8 76h84M12 24l20 52M32 24l20 52M52 24l20 52M72 24l20 52M12 76l20-52M32 76l20-52M52 76l20-52M72 76l20-52"/>`),
+  },
+];
+
+const DEFAULT_STENCILS = [
+  ...FALLBACK_STENCILS.map((stencil) => ({ ...stencil, targetMode: DIRECTOR, technicalFamily: "BLOCKING" })),
+  ...TECHNICAL_STENCILS,
+];
+
 const PAPER = {
   ink: "#f4f2ed",
   panel: "#151d26",
@@ -190,6 +281,55 @@ const rotatePoint = (p, center, delta) => {
   return { x: center.x + dx * c - dy * s, y: center.y + dx * s + dy * c };
 };
 
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const roundTo = (value, step = 0.5) => Math.round(value / step) * step;
+const samePoint = (a, b, tolerance = 0.04) => !!a && !!b && dist(a, b) <= tolerance;
+const wallLength = (wall) => dist(wall.a, wall.b);
+const wallPoint = (wall, t) => ({
+  x: wall.a.x + (wall.b.x - wall.a.x) * t,
+  y: wall.a.y + (wall.b.y - wall.a.y) * t,
+});
+const wallAngle = (wall) => deg(Math.atan2(wall.b.y - wall.a.y, wall.b.x - wall.a.x));
+
+const projectToWall = (point, wall) => {
+  const dx = wall.b.x - wall.a.x;
+  const dy = wall.b.y - wall.a.y;
+  const lengthSquared = dx * dx + dy * dy || 1;
+  const rawT = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / lengthSquared;
+  const t = clamp(rawT, 0, 1);
+  const projected = wallPoint(wall, t);
+  return { t, point: projected, distance: dist(point, projected) };
+};
+
+const openingRange = (opening, wall) => {
+  const length = Math.max(wallLength(wall), 0.01);
+  const half = (Number(opening.width) || 0) / (2 * length);
+  return { start: clamp(opening.t - half, 0, 1), end: clamp(opening.t + half, 0, 1) };
+};
+
+const wallSegments = (wall, openings) => {
+  const ranges = openings
+    .filter((opening) => opening.wallId === wall.id)
+    .map((opening) => openingRange(opening, wall))
+    .sort((a, b) => a.start - b.start);
+  const segments = [];
+  let cursor = 0;
+  ranges.forEach((range) => {
+    if (range.start > cursor + 0.002) segments.push({ start: cursor, end: range.start });
+    cursor = Math.max(cursor, range.end);
+  });
+  if (cursor < 0.998) segments.push({ start: cursor, end: 1 });
+  return segments;
+};
+
+const doorArcPath = (width, hinge, swing) => {
+  const hingeX = hinge === "end" ? width / 2 : -width / 2;
+  const leafX = hinge === "end" ? -width / 2 : width / 2;
+  const sweep = `${hinge === "end" ? (swing === "out" ? 0 : 1) : swing === "out" ? 1 : 0}`;
+  const y = swing === "out" ? -width : width;
+  return `M ${hingeX} 0 A ${width} ${width} 0 0 ${sweep} ${leafX} ${y}`;
+};
+
 /* ---------------- shot description engine ---------------- */
 
 function frameHeight(distanceFt, focal, sensorKey) {
@@ -231,57 +371,71 @@ function heightNote(h) {
 /* ---------------- object factories ---------------- */
 
 let seq = 0;
-const uid = (p) => `${p}${++seq}`;
+const uid = (p) => `${p}${Date.now().toString(36)}${++seq}`;
 
-const newActor = (x, y, name) => ({
-  id: uid("a"),
-  type: "actor",
-  name,
-  x,
-  y,
-  rot: 180,
-  height: SUBJECT_HEIGHT,
-});
+const newActor = (x, y, name, gender = "female") =>
+  withLayerDefaults(
+    {
+      id: uid("a"),
+      type: "actor",
+      name,
+      x,
+      y,
+      rot: 180,
+      height: SUBJECT_HEIGHT,
+      gender,
+    },
+    DIRECTOR
+  );
 
-const newCamera = (x, y, name, extra = {}) => ({
-  id: uid("c"),
-  type: "camera",
-  name,
-  x,
-  y,
-  rot: 0,
-  focal: 35,
-  sensor: "Super 35",
-  height: EYE_HEIGHT,
-  move: "Static",
-  support: "Sticks",
-  est: 20,
-  sameSetup: false,
-  notes: "",
-  linkTo: null,
-  aim: true,
-  color: "#e8a33d",
-  showFov: true,
-  ...extra,
-});
+const newCamera = (x, y, name, extra = {}) =>
+  withLayerDefaults(
+    {
+      id: uid("c"),
+      type: "camera",
+      name,
+      x,
+      y,
+      rot: 0,
+      focal: 35,
+      sensor: "Super 35",
+      height: EYE_HEIGHT,
+      move: "Static",
+      support: "Sticks",
+      est: "",
+      sameSetup: false,
+      notes: "",
+      linkTo: null,
+      aim: true,
+      color: "#e8a33d",
+      showFov: true,
+      ...extra,
+    },
+    extra.layerContext || DIRECTOR
+  );
 
-const newProp = (x, y, name, st = null) => ({
-  id: uid("p"),
-  type: "prop",
-  name,
-  x,
-  y,
-  rot: 0,
-  w: st ? st.w : 5,
-  d: st ? st.d : 2.5,
-  src: st ? st.file : null,
-  stencilId: st ? st.id : null,
-  tint: st ? st.tint || "light" : "none",
-});
+const newProp = (x, y, name, st = null, layerContext = DIRECTOR) =>
+  withLayerDefaults(
+    {
+      id: uid("p"),
+      type: "prop",
+      name,
+      x,
+      y,
+      rot: 0,
+      w: st ? st.w : 5,
+      d: st ? st.d : 2.5,
+      src: st ? st.file : null,
+      stencilId: st ? st.id : null,
+      tint: st ? st.tint || "light" : "none",
+      technicalFamily: st?.technicalFamily || null,
+    },
+    st?.targetMode === CINEMATOGRAPHY ? CINEMATOGRAPHY : layerContext
+  );
 
 const STARTER = () => {
-  const a = newActor(-4, 0, "ANNA");
-  const b = newActor(4, 0, "BEN");
+  const a = newActor(-4, 0, "ANNA", "female");
+  const b = newActor(4, 0, "BEN", "male");
   a.rot = 90;
   b.rot = 270;
   const table = newProp(0, 0, "Table", FALLBACK_STENCILS[0]);
@@ -294,13 +448,27 @@ const STARTER = () => {
 
 export default function BlockingBoard() {
   const [objects, setObjects] = useState(STARTER);
+  const [walls, setWalls] = useState([]);
+  const [openings, setOpenings] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [selectedWall, setSelectedWall] = useState(null);
+  const [selectedOpening, setSelectedOpening] = useState(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 16 });
   const [line, setLine] = useState({ on: true, auto: true, a: null, b: null, side: 1 });
   const [showCones, setShowCones] = useState(true);
   const [paper, setPaper] = useState(true);
   const [pane, setPane] = useState("shots");
-  const [stencils, setStencils] = useState(FALLBACK_STENCILS);
+  const [wallTool, setWallTool] = useState("select");
+  const [wallDraft, setWallDraft] = useState(null);
+  const [wallHover, setWallHover] = useState(null);
+  const [snap, setSnap] = useState({ grid: true, nodes: true, lines: true, angles: true });
+  const [wallDefaults, setWallDefaults] = useState({ thickness: 0.32, style: "solid" });
+  const [blueprint, setBlueprint] = useState(null);
+  const [previewShot, setPreviewShot] = useState(null);
+  const [includePrevisInPrint, setIncludePrevisInPrint] = useState(false);
+  const [layerMode, setLayerMode] = useState(DIRECTOR);
+  const [cinematographyDisplay, setCinematographyDisplay] = useState("hide");
+  const [stencils, setStencils] = useState(DEFAULT_STENCILS);
   const [stencilQuery, setStencilQuery] = useState("");
   const [catalogNote, setCatalogNote] = useState("Built in set. No stencil folder found yet.");
   const [history, setHistory] = useState([]);
@@ -319,12 +487,13 @@ export default function BlockingBoard() {
   const drag = useRef(null);
   const fileRef = useRef(null);
   const pngRef = useRef(null);
+  const blueprintRef = useRef(null);
   const historyRef = useRef([]);
   const lastHistoryRef = useRef({ key: null, at: 0, value: null });
 
   const snapshot = useCallback(
-    () => JSON.parse(JSON.stringify({ objects, line, meta })),
-    [objects, line, meta]
+    () => JSON.parse(JSON.stringify({ objects, walls, openings, line, meta, blueprint })),
+    [objects, walls, openings, line, meta, blueprint]
   );
 
   const pushSnapshot = useCallback((before, key = "change") => {
@@ -348,9 +517,14 @@ export default function BlockingBoard() {
     setHistory(next);
     lastHistoryRef.current = { key: null, at: 0, value: null };
     setObjects(previous.objects);
+    setWalls(previous.walls || []);
+    setOpenings(previous.openings || []);
     setLine(previous.line);
     setMeta(previous.meta);
+    setBlueprint(previous.blueprint || null);
     setSelected(null);
+    setSelectedWall(null);
+    setSelectedOpening(null);
   }, []);
 
   const changeLine = useCallback(
@@ -387,10 +561,17 @@ export default function BlockingBoard() {
             d: Number(s.d) > 0 ? Number(s.d) : 3,
             tint: s.tint || "light",
             file: /^(https?:|data:|\/)/.test(s.file) ? s.file : base + s.file,
+            targetMode:
+              s.targetMode === CINEMATOGRAPHY ? CINEMATOGRAPHY : s.targetMode === "BOTH" ? "BOTH" : DIRECTOR,
+            technicalFamily: s.technicalFamily || "BLOCKING",
+            searchTags: Array.isArray(s.searchTags) ? s.searchTags : [],
           }));
         if (loaded.length) {
-          setStencils(loaded);
-          setCatalogNote(`${loaded.length} stencils loaded from the folder.`);
+          setStencils([
+            ...DEFAULT_STENCILS.filter((builtIn) => !loaded.some((stencil) => stencil.id === builtIn.id)),
+            ...loaded,
+          ]);
+          setCatalogNote(`${loaded.length} stencils loaded from the folder, plus the built-in cinematography library.`);
         }
       })
       .catch(() => {
@@ -404,6 +585,37 @@ export default function BlockingBoard() {
   const byId = useMemo(() => Object.fromEntries(objects.map((o) => [o.id, o])), [objects]);
   const actors = objects.filter((o) => o.type === "actor");
   const cameras = objects.filter((o) => o.type === "camera");
+
+  /* This is the only layer-aware adapter the SVG renderer and pointer pipeline
+     need. The core object array, geometry, and event flow remain unchanged. */
+  const layerPresentation = useCallback(
+    (object) => resolveLayerPresentation(object, layerMode, cinematographyDisplay),
+    [cinematographyDisplay, layerMode]
+  );
+
+  const canInteractWithObject = useCallback(
+    (object) => !!object && layerPresentation(object).interactive,
+    [layerPresentation]
+  );
+
+  const renderNodes = useMemo(
+    () =>
+      objects
+        .map((object) => ({ object, presentation: layerPresentation(object) }))
+        .filter(({ presentation }) => presentation.render),
+    [layerPresentation, objects]
+  );
+  const renderedProps = renderNodes.filter(({ object }) => object.type === "prop");
+  const renderedActors = renderNodes.filter(({ object }) => object.type === "actor");
+  const renderedCameras = renderNodes.filter(({ object }) => object.type === "camera");
+
+  useEffect(() => {
+    const current = selected ? byId[selected] : null;
+    if (current && layerMode === DIRECTOR && normalizeLayerContext(current.layerContext) === CINEMATOGRAPHY) {
+      setSelected(null);
+      setPane("shots");
+    }
+  }, [byId, layerMode, selected]);
 
   /* ---- who gets the line ----
      With two actors it is obvious. With more, score every pair on how much
@@ -471,15 +683,24 @@ export default function BlockingBoard() {
         return;
       }
       if (tag === "input" || tag === "textarea" || tag === "select") return;
-      if ((e.key === "Delete" || e.key === "Backspace") && selected) {
+      if ((e.key === "Delete" || e.key === "Backspace") && (selected || selectedWall || selectedOpening)) {
         e.preventDefault();
-        removeObject(selected);
+        if (selected) removeObject(selected);
+        if (selectedWall) removeWall(selectedWall);
+        if (selectedOpening) removeOpening(selectedOpening);
       }
-      if (e.key === "Escape") setSelected(null);
+      if (e.key === "Escape") {
+        setSelected(null);
+        setSelectedWall(null);
+        setSelectedOpening(null);
+        setWallDraft(null);
+        setWallHover(null);
+        setWallTool("select");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, objects, undo]);
+  }, [selected, selectedWall, selectedOpening, objects, walls, openings, undo]);
 
   const toWorld = useCallback(
     (e) => {
@@ -490,6 +711,57 @@ export default function BlockingBoard() {
       };
     },
     [view]
+  );
+
+  const nearestWall = useCallback(
+    (point, wallId = null) => {
+      const candidates = wallId ? walls.filter((wall) => wall.id === wallId) : walls;
+      return candidates.reduce((best, wall) => {
+        const projection = projectToWall(point, wall);
+        return !best || projection.distance < best.distance ? { wall, ...projection } : best;
+      }, null);
+    },
+    [walls]
+  );
+
+  const snapWorld = useCallback(
+    (point, origin = null) => {
+      let next = { ...point };
+      if (snap.grid) next = { x: roundTo(next.x), y: roundTo(next.y) };
+
+      if (origin && snap.angles) {
+        const dx = next.x - origin.x;
+        const dy = next.y - origin.y;
+        const length = Math.hypot(dx, dy);
+        if (length > 0.05) {
+          const angle = Math.atan2(dy, dx);
+          const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+          const delta = Math.abs(((angle - snappedAngle + Math.PI) % (Math.PI * 2)) - Math.PI);
+          if (delta < Math.PI / 15) {
+            next = { x: origin.x + Math.cos(snappedAngle) * length, y: origin.y + Math.sin(snappedAngle) * length };
+            if (snap.grid) next = { x: roundTo(next.x), y: roundTo(next.y) };
+          }
+        }
+      }
+
+      const endpoints = walls.flatMap((wall) => [wall.a, wall.b]);
+      if (snap.nodes) {
+        const node = endpoints.reduce(
+          (best, endpoint) => (!best || dist(next, endpoint) < dist(next, best) ? endpoint : best),
+          null
+        );
+        if (node && dist(next, node) <= 0.72) next = { ...node };
+      }
+
+      if (snap.lines) {
+        const hit = nearestWall(next);
+        if (hit && hit.distance <= 0.42 && (!snap.nodes || !endpoints.some((endpoint) => samePoint(endpoint, next)))) {
+          next = hit.point;
+        }
+      }
+      return { x: +next.x.toFixed(2), y: +next.y.toFixed(2) };
+    },
+    [nearestWall, snap, walls]
   );
 
   /* ---- effective heading: aimed cameras always point at their subject ---- */
@@ -506,6 +778,7 @@ export default function BlockingBoard() {
 
   /* ---- moving an actor carries its linked cameras with it ---- */
   const moveObject = (id, nx, ny, record = true) => {
+    if (!canInteractWithObject(byId[id])) return;
     if (record) recordUndo(`object:${id}`);
     setObjects((prev) => {
       const target = prev.find((o) => o.id === id);
@@ -523,6 +796,7 @@ export default function BlockingBoard() {
   };
 
   const rotateObject = (id, newRot, record = true) => {
+    if (!canInteractWithObject(byId[id])) return;
     if (record) recordUndo(`object:${id}`);
     setObjects((prev) => {
       const target = prev.find((o) => o.id === id);
@@ -540,11 +814,15 @@ export default function BlockingBoard() {
   };
 
   const patch = (id, fields, record = true) => {
+    const target = byId[id];
+    const isLayerControl = Object.prototype.hasOwnProperty.call(fields, "isVisible") || Object.prototype.hasOwnProperty.call(fields, "isLocked");
+    if (!target || (!canInteractWithObject(target) && !isLayerControl)) return;
     if (record) recordUndo(`object:${id}`);
     setObjects((prev) => prev.map((o) => (o.id === id ? { ...o, ...fields } : o)));
   };
 
   const removeObject = (id) => {
+    if (!canInteractWithObject(byId[id])) return;
     recordUndo("remove");
     setObjects((prev) =>
       prev.filter((o) => o.id !== id).map((o) => (o.linkTo === id ? { ...o, linkTo: null, aim: false } : o))
@@ -553,12 +831,39 @@ export default function BlockingBoard() {
     setSelected(null);
   };
 
+  const removeWall = (id) => {
+    recordUndo("remove-wall");
+    setWalls((previous) => previous.filter((wall) => wall.id !== id));
+    setOpenings((previous) => previous.filter((opening) => opening.wallId !== id));
+    setSelectedWall(null);
+    setSelectedOpening(null);
+  };
+
+  const removeOpening = (id) => {
+    recordUndo("remove-opening");
+    setOpenings((previous) => previous.filter((opening) => opening.id !== id));
+    setSelectedOpening(null);
+  };
+
+  const patchWall = (id, fields, record = true) => {
+    if (record) recordUndo(`wall:${id}`);
+    setWalls((previous) => previous.map((wall) => (wall.id === id ? { ...wall, ...fields } : wall)));
+  };
+
+  const patchOpening = (id, fields, record = true) => {
+    if (record) recordUndo(`opening:${id}`);
+    setOpenings((previous) => previous.map((opening) => (opening.id === id ? { ...opening, ...fields } : opening)));
+  };
+
   /* ---- pointer handling ---- */
 
   const onObjectDown = (e, o, mode) => {
+    if (!canInteractWithObject(o)) return;
     e.stopPropagation();
     const w = toWorld(e);
     setSelected(o.id);
+    setSelectedWall(null);
+    setSelectedOpening(null);
     setPane("object");
     drag.current = {
       mode,
@@ -574,20 +879,170 @@ export default function BlockingBoard() {
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
-  const onCanvasDown = (e) => {
+  const addOpeningAt = (kind, point, preferredWallId = null) => {
+    const hit = nearestWall(point, preferredWallId);
+    if (!hit || hit.distance > 1.25) return false;
+    const width = kind === "window" ? 4 : 3;
+    const id = uid("o");
+    recordUndo(`add-${kind}`);
+    setOpenings((previous) => [
+      ...previous,
+      {
+        id,
+        type: kind,
+        wallId: hit.wall.id,
+        t: +clamp(hit.t, 0.04, 0.96).toFixed(3),
+        width,
+        swing: "in",
+        hinge: "start",
+      },
+    ]);
     setSelected(null);
+    setSelectedWall(null);
+    setSelectedOpening(id);
+    setPane("setdesign");
+    return true;
+  };
+
+  const onWallDown = (e, wall, mode = "select") => {
+    e.stopPropagation();
+    const point = toWorld(e);
+    if (["door", "window", "opening"].includes(wallTool)) {
+      addOpeningAt(wallTool, point, wall.id);
+      return;
+    }
+    setSelected(null);
+    setSelectedOpening(null);
+    setSelectedWall(wall.id);
+    setPane("setdesign");
+    const projection = projectToWall(point, wall);
+    drag.current = {
+      mode,
+      id: wall.id,
+      startPoint: point,
+      originalA: { ...wall.a },
+      originalB: { ...wall.b },
+      node: mode === "wall-node-a" ? "a" : mode === "wall-node-b" ? "b" : null,
+      anchor: mode === "wall-node-a" ? wall.b : wall.a,
+      currentNode: mode === "wall-node-a" ? { ...wall.a } : mode === "wall-node-b" ? { ...wall.b } : null,
+      before: snapshot(),
+      changed: false,
+      startT: projection.t,
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const onOpeningDown = (e, opening, mode = "opening-move") => {
+    e.stopPropagation();
+    setSelected(null);
+    setSelectedWall(null);
+    setSelectedOpening(opening.id);
+    setPane("setdesign");
+    drag.current = { mode, id: opening.id, before: snapshot(), changed: false };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const onCanvasDown = (e) => {
+    const point = toWorld(e);
+    if (wallTool === "wall") {
+      const next = snapWorld(point, wallDraft);
+      setSelected(null);
+      setSelectedWall(null);
+      setSelectedOpening(null);
+      setPane("setdesign");
+      if (!wallDraft) {
+        setWallDraft(next);
+      } else if (dist(next, wallDraft) > 0.15) {
+        recordUndo("draw-wall");
+        setWalls((previous) => [
+          ...previous,
+          {
+            id: uid("w"),
+            a: { ...wallDraft },
+            b: { ...next },
+            thickness: wallDefaults.thickness,
+            style: wallDefaults.style,
+          },
+        ]);
+        setWallDraft(next);
+      }
+      return;
+    }
+    if (["door", "window", "opening"].includes(wallTool)) {
+      addOpeningAt(wallTool, point);
+      return;
+    }
+    setSelected(null);
+    setSelectedWall(null);
+    setSelectedOpening(null);
     if (pane === "object") setPane("shots");
     drag.current = { mode: "pan", sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
   };
 
   const onMove = (e) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d) {
+      if (wallTool === "wall") setWallHover(snapWorld(toWorld(e), wallDraft));
+      return;
+    }
     if (d.mode === "pan") {
       setView((v) => ({ ...v, x: d.vx + (e.clientX - d.sx), y: d.vy + (e.clientY - d.sy) }));
       return;
     }
     const w = toWorld(e);
+    if (d.mode === "wall-node-a" || d.mode === "wall-node-b") {
+      const next = snapWorld(w, d.anchor);
+      const original = d.node === "a" ? d.originalA : d.originalB;
+      d.changed = d.changed || !samePoint(next, original);
+      const source = d.currentNode || original;
+      setWalls((previous) =>
+        previous.map((wall) => ({
+          ...wall,
+          a: samePoint(wall.a, source) ? next : wall.a,
+          b: samePoint(wall.b, source) ? next : wall.b,
+        }))
+      );
+      d.currentNode = next;
+      return;
+    }
+    if (d.mode === "wall-midpoint") {
+      const rawDx = w.x - d.startPoint.x;
+      const rawDy = w.y - d.startPoint.y;
+      const startMid = { x: (d.originalA.x + d.originalB.x) / 2, y: (d.originalA.y + d.originalB.y) / 2 };
+      const snappedMid = snapWorld({ x: startMid.x + rawDx, y: startMid.y + rawDy });
+      const dx = snappedMid.x - startMid.x;
+      const dy = snappedMid.y - startMid.y;
+      d.changed = d.changed || Math.hypot(dx, dy) > 0.01;
+      setWalls((previous) =>
+        previous.map((wall) =>
+          wall.id === d.id
+            ? { ...wall, a: { x: d.originalA.x + dx, y: d.originalA.y + dy }, b: { x: d.originalB.x + dx, y: d.originalB.y + dy } }
+            : wall
+        )
+      );
+      return;
+    }
+    if (d.mode === "opening-move") {
+      const hit = nearestWall(w);
+      if (!hit || hit.distance > 1.5) return;
+      d.changed = true;
+      setOpenings((previous) =>
+        previous.map((opening) =>
+          opening.id === d.id ? { ...opening, wallId: hit.wall.id, t: +clamp(hit.t, 0.02, 0.98).toFixed(3) } : opening
+        )
+      );
+      return;
+    }
+    if (d.mode === "opening-resize") {
+      const opening = openings.find((item) => item.id === d.id);
+      const wall = opening && walls.find((item) => item.id === opening.wallId);
+      if (!opening || !wall) return;
+      const projection = projectToWall(w, wall);
+      const nextWidth = clamp(Math.abs(projection.t - opening.t) * wallLength(wall) * 2, 0.5, wallLength(wall) * 0.92);
+      d.changed = true;
+      patchOpening(d.id, { width: +nextWidth.toFixed(2) }, false);
+      return;
+    }
     const o = byId[d.id];
     if (!o) return;
     if (d.mode === "move") {
@@ -639,7 +1094,12 @@ export default function BlockingBoard() {
   const addActor = () => {
     const c = centerOfView();
     const names = ["ANNA", "BEN", "CLARA", "DIEGO", "EVE", "FRANK", "GRACE", "HUGO"];
-    const o = newActor(c.x, c.y, names[actors.length % names.length]);
+    const o = newActor(
+      c.x,
+      c.y,
+      names[actors.length % names.length],
+      actors.length % 2 === 0 ? "female" : "male"
+    );
     recordUndo("add");
     setObjects((p) => [...p, o]);
     setSelected(o.id);
@@ -648,7 +1108,7 @@ export default function BlockingBoard() {
 
   const addCamera = () => {
     const c = centerOfView();
-    const o = newCamera(c.x, c.y - 8, String.fromCharCode(65 + cameras.length));
+    const o = newCamera(c.x, c.y - 8, String.fromCharCode(65 + cameras.length), { layerContext: layerMode });
     o.aim = false;
     recordUndo("add");
     setObjects((p) => [...p, o]);
@@ -658,7 +1118,7 @@ export default function BlockingBoard() {
 
   const addProp = () => {
     const c = centerOfView();
-    const o = newProp(c.x, c.y, "Set piece");
+    const o = newProp(c.x, c.y, "Set piece", null, layerMode);
     recordUndo("add");
     setObjects((p) => [...p, o]);
     setSelected(o.id);
@@ -706,6 +1166,9 @@ export default function BlockingBoard() {
                 d: meta.d,
                 tint: "light",
                 file: r.result,
+                targetMode: layerMode,
+                technicalFamily: layerMode === CINEMATOGRAPHY ? "CUSTOM_TECHNICAL" : "BLOCKING",
+                searchTags: ["imported"],
               });
             };
             r.onerror = () => resolve(null);
@@ -719,6 +1182,33 @@ export default function BlockingBoard() {
       setCatalogNote(`${good.length} imported into this session.`);
     });
     e.target.value = "";
+  };
+
+  const importBlueprint = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const source = reader.result;
+      const image = new Image();
+      image.onload = () => {
+        recordUndo("blueprint");
+        const aspect = image.naturalWidth && image.naturalHeight ? image.naturalHeight / image.naturalWidth : 0.7;
+        setBlueprint({ src: source, x: 0, y: 0, width: 30, height: +(30 * aspect).toFixed(2), opacity: 0.42 });
+      };
+      image.onerror = () => {
+        recordUndo("blueprint");
+        setBlueprint({ src: source, x: 0, y: 0, width: 30, height: 21, opacity: 0.42 });
+      };
+      image.src = source;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const patchBlueprint = (fields, record = true) => {
+    if (record) recordUndo("blueprint");
+    setBlueprint((current) => (current ? { ...current, ...fields } : current));
   };
 
   /* ---- line of action ---- */
@@ -788,6 +1278,7 @@ export default function BlockingBoard() {
   }, [cameras, actors, byId, line, linePair, meta.scene]);
 
   const moveShot = (id, dir) => {
+    if (!canInteractWithObject(byId[id])) return;
     recordUndo("shot-order");
     setObjects((prev) => {
       const idx = prev.findIndex((o) => o.id === id);
@@ -806,7 +1297,12 @@ export default function BlockingBoard() {
   const stencilGroups = useMemo(() => {
     const q = stencilQuery.trim().toLowerCase();
     const hits = stencils.filter(
-      (s) => !q || s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)
+      (s) =>
+        stencilIsAvailableInMode(s, layerMode) &&
+        (!q ||
+          s.name.toLowerCase().includes(q) ||
+          s.category.toLowerCase().includes(q) ||
+          (s.searchTags || []).some((tag) => String(tag).toLowerCase().includes(q)))
     );
     const map = new Map();
     hits.forEach((s) => {
@@ -814,7 +1310,7 @@ export default function BlockingBoard() {
       map.get(s.category).push(s);
     });
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [stencils, stencilQuery]);
+  }, [layerMode, stencils, stencilQuery]);
 
   /* ---- import and export ---- */
 
@@ -830,10 +1326,28 @@ export default function BlockingBoard() {
   const slugline = () =>
     `${meta.intExt} ${(meta.location || "LOCATION").toUpperCase()} ${meta.timeOfDay ? "\u2014 " + meta.timeOfDay : ""}`.trim();
 
-  const totalEst = shots.reduce((n, s) => n + (Number(s.cam.est) || 0), 0);
+  const plannedMinutes = shots.reduce((n, s) => n + (Number(s.cam.est) || 0), 0);
+  const hasPlannedMinutes = shots.some((s) => s.cam.est !== "" && s.cam.est != null && Number(s.cam.est) >= 0);
 
   const exportScene = () =>
-    download("scene.json", JSON.stringify({ objects, line, meta }, null, 2), "application/json");
+    download(
+      "scene.json",
+      JSON.stringify(
+        {
+          schemaVersion: LAYER_SCHEMA_VERSION,
+          layerSettings: { cinematographyDisplay },
+          objects,
+          walls,
+          openings,
+          line,
+          meta,
+          blueprint,
+        },
+        null,
+        2
+      ),
+      "application/json"
+    );
 
   const exportShotList = () => {
     const head = [
@@ -849,7 +1363,7 @@ export default function BlockingBoard() {
       "Movement",
       "Support",
       "Distance ft",
-      "Est min",
+      "Planned min",
       "Notes",
     ];
     const rows = shots.map((s) => [
@@ -865,7 +1379,7 @@ export default function BlockingBoard() {
       s.cam.move,
       s.cam.support,
       s.distance.toFixed(1),
-      s.cam.est,
+      s.cam.est ?? "",
       s.cam.notes.replace(/"/g, "'"),
     ]);
     const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
@@ -874,7 +1388,7 @@ export default function BlockingBoard() {
 
   /* A shot list a 1st AD would recognize: scene header, slate column, one row per
      setup, camera letter only where a second camera is on the same setup. */
-  const buildShotListHtml = () => {
+  const buildShotListHtml = (previsFrames = []) => {
     const esc = (s) =>
       String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
     const rows = shots
@@ -894,6 +1408,19 @@ export default function BlockingBoard() {
       </tr>`
       )
       .join("\n");
+    const previs = previsFrames.length
+      ? `<section class="previs-page">
+          <div class="previs-title">3D previs frames</div>
+          <div class="previs-grid">${previsFrames
+            .map(
+              (frame) => `<figure class="previs-card">
+                <img src="${frame.image}" alt="3D previs for setup ${esc(frame.slate)}">
+                <figcaption><strong>${esc(frame.slate)}</strong>${frame.camLetter ? ` <span class="cam">${esc(frame.camLetter)}</span>` : ""} · ${esc(frame.description)}</figcaption>
+              </figure>`
+            )
+            .join("")}</div>
+        </section>`
+      : "";
 
     return `<!doctype html><html><head><meta charset="utf-8">
 <title>Shot list, scene ${esc(meta.scene)}</title>
@@ -924,6 +1451,12 @@ export default function BlockingBoard() {
   .flag td { background: #f6f6f6; }
   tfoot td { border-bottom: none; border-top: 1px solid #999; font-weight: 700; padding-top: 8px; }
   .foot { margin-top: 18px; font-size: 9px; color: #777; display: flex; justify-content: space-between; }
+  .previs-page { break-before: page; page-break-before: always; }
+  .previs-title { font-size: 16px; font-weight: 700; border-bottom: 2px solid #111; padding-bottom: 7px; margin-bottom: 12px; }
+  .previs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .previs-card { margin: 0; break-inside: avoid; page-break-inside: avoid; border: 1px solid #bbb; padding: 6px; }
+  .previs-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: #111820; }
+  .previs-card figcaption { font-size: 9px; line-height: 1.35; margin-top: 5px; }
 </style></head><body>
 <div class="head">
   <div>
@@ -942,13 +1475,16 @@ export default function BlockingBoard() {
   <thead><tr>
     <th style="width:8%">Setup</th><th style="width:6%">Size</th><th style="width:11%">Subject</th>
     <th style="width:15%">Angle</th><th style="width:7%">Lens</th><th style="width:11%">Movement</th>
-    <th style="width:11%">Support</th><th style="width:6%">Est</th><th>Notes</th>
+    <th style="width:11%">Support</th><th style="width:6%">Plan</th><th>Notes</th>
   </tr></thead>
   <tbody>${rows}</tbody>
   <tfoot><tr>
-    <td colspan="7">${shots.length} setups</td><td class="num">${totalEst}</td><td>minutes estimated</td>
+    <td colspan="7">${shots.length} setups</td><td class="num">${hasPlannedMinutes ? plannedMinutes : ""}</td><td>${
+      hasPlannedMinutes ? "user-entered minutes" : "No planning minutes entered"
+    }</td>
   </tr></tfoot>
 </table>
+${previs}
 <div class="foot">
   <span>Setup letters skip I and O. A second camera on the same setup shares the slate and is marked by camera letter.</span>
   <span>${new Date().toLocaleDateString()}</span>
@@ -957,7 +1493,15 @@ export default function BlockingBoard() {
   };
 
   const printShotList = () => {
-    const html = buildShotListHtml();
+    const previsFrames = includePrevisInPrint
+      ? shots.map((shot) => ({
+          image: renderPrevisFrame({ shot, objects, walls, openings }),
+          slate: shot.slate,
+          camLetter: shot.multicam ? shot.camLetter : "",
+          description: shot.description,
+        }))
+      : [];
+    const html = buildShotListHtml(previsFrames);
     const w = window.open("", "_blank");
     if (w) {
       w.document.write(html);
@@ -975,14 +1519,19 @@ export default function BlockingBoard() {
     const r = new FileReader();
     r.onload = () => {
       try {
-        const data = JSON.parse(r.result);
-        if (Array.isArray(data.objects)) {
-          recordUndo("open-scene");
-          setObjects(data.objects);
-          setLine(data.line || { on: true, auto: true, a: null, b: null, side: 1 });
-          if (data.meta) setMeta((m) => ({ ...m, ...data.meta }));
-          setSelected(null);
-        }
+        const data = migrateSceneDocument(JSON.parse(r.result));
+        recordUndo("open-scene");
+        setObjects(data.objects);
+        setWalls(Array.isArray(data.walls) ? data.walls : []);
+        setOpenings(Array.isArray(data.openings) ? data.openings : []);
+        setLine(data.line || { on: true, auto: true, a: null, b: null, side: 1 });
+        if (data.meta) setMeta((m) => ({ ...m, ...data.meta }));
+        setBlueprint(data.blueprint || null);
+        setCinematographyDisplay(data.layerSettings.cinematographyDisplay);
+        setLayerMode(DIRECTOR);
+        setSelected(null);
+        setSelectedWall(null);
+        setSelectedOpening(null);
       } catch (err) {
         console.error("Could not read that file", err);
       }
@@ -996,6 +1545,12 @@ export default function BlockingBoard() {
      ============================================================ */
 
   const sel = selected ? byId[selected] : null;
+  const selectedWallData = selectedWall ? walls.find((wall) => wall.id === selectedWall) : null;
+  const selectedOpeningData = selectedOpening ? openings.find((opening) => opening.id === selectedOpening) : null;
+  const wallSlices = useMemo(
+    () => walls.flatMap((wall) => wallSegments(wall, openings).map((segment) => ({ wall, ...segment }))),
+    [walls, openings]
+  );
   const C = paper ? PAPER : COLORS;
   const px = (n) => n / view.scale; // stroke widths that stay constant on screen
 
@@ -1029,7 +1584,43 @@ export default function BlockingBoard() {
         </div>
         <Btn onClick={addActor}>Add performer</Btn>
         <Btn onClick={addCamera}>Add camera</Btn>
+        <Btn
+          onClick={() => {
+            const currentShot = shots.at(-1);
+            if (currentShot) setPreviewShot(currentShot);
+          }}
+          disabled={shots.length === 0}
+          accent
+          data-testid="button-open-3d-previs"
+        >
+          Open 3D preview
+        </Btn>
         <Btn onClick={() => setPane("stencils")}>Set pieces</Btn>
+        <Btn
+          onClick={() => setLayerMode((current) => (current === DIRECTOR ? CINEMATOGRAPHY : DIRECTOR))}
+          active={layerMode === CINEMATOGRAPHY}
+          data-testid="button-cinematography-mode"
+          aria-pressed={layerMode === CINEMATOGRAPHY}
+        >
+          Cinematography: {layerMode === CINEMATOGRAPHY ? "ON" : "OFF"}
+        </Btn>
+        <Btn
+          onClick={() => setCinematographyDisplay((current) => (current === "hide" ? "ghost" : "hide"))}
+          active={cinematographyDisplay === "ghost"}
+          data-testid="button-cinematography-display"
+          title="Controls how cinematography objects appear in Director mode"
+        >
+          Director: {cinematographyDisplay === "ghost" ? "ghost" : "hide"} cinema
+        </Btn>
+        <Btn
+          onClick={() => {
+            setPane("setdesign");
+            setWallTool("wall");
+          }}
+          active={wallTool === "wall"}
+        >
+          Wall tool
+        </Btn>
         <Btn
           onClick={() => changeLine((l) => ({ ...l, on: !l.on }))}
           disabled={actors.length < 2}
@@ -1055,16 +1646,25 @@ export default function BlockingBoard() {
             File & output
           </summary>
           <div
-            className="absolute right-0 top-full mt-2 z-20 w-40 p-2 rounded grid gap-1 shadow-xl"
+            className="absolute right-0 top-full mt-2 z-20 w-56 p-2 rounded grid gap-2 shadow-xl"
             style={{ background: COLORS.panel, border: `1px solid ${COLORS.rule}` }}
           >
-            <Btn onClick={printShotList} accent>Print shot list</Btn>
+            <label className="flex items-center gap-2 px-1 text-xs" style={{ color: COLORS.dim }}>
+              <input
+                type="checkbox"
+                checked={includePrevisInPrint}
+                onChange={(e) => setIncludePrevisInPrint(e.target.checked)}
+              />
+              Include 3D previs frames in PDF
+            </label>
+            <Btn onClick={printShotList} accent>Print / save PDF</Btn>
             <Btn onClick={exportShotList}>Export CSV</Btn>
             <Btn onClick={exportScene}>Save scene</Btn>
             <Btn onClick={() => fileRef.current.click()}>Open scene</Btn>
           </div>
         </details>
         <input ref={fileRef} type="file" accept="application/json" onChange={importScene} className="hidden" />
+        <input ref={blueprintRef} type="file" accept="image/*" onChange={importBlueprint} className="hidden" />
       </header>
 
       <div className="flex-1 flex min-h-0 max-lg:flex-col">
@@ -1073,7 +1673,16 @@ export default function BlockingBoard() {
           <svg
             ref={svgRef}
             className="w-full h-full touch-none"
-            style={{ cursor: drag.current?.mode === "pan" ? "grabbing" : "default" }}
+            style={{
+              cursor:
+                drag.current?.mode === "pan"
+                  ? "grabbing"
+                  : wallTool === "wall"
+                  ? "crosshair"
+                  : ["door", "window", "opening"].includes(wallTool)
+                  ? "copy"
+                  : "default",
+            }}
             onPointerDown={onCanvasDown}
             onPointerMove={onMove}
             onPointerUp={onUp}
@@ -1100,6 +1709,225 @@ export default function BlockingBoard() {
             </g>
 
             <g transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}>
+              {/* imported location plan / blueprint, kept below construction and blocking */}
+              {blueprint && (
+                <image
+                  href={blueprint.src}
+                  x={blueprint.x - blueprint.width / 2}
+                  y={blueprint.y - blueprint.height / 2}
+                  width={blueprint.width}
+                  height={blueprint.height}
+                  opacity={blueprint.opacity}
+                  preserveAspectRatio="none"
+                  style={{ pointerEvents: "none" }}
+                />
+              )}
+
+              {/* set designer: wall slices automatically leave apertures for hosted elements */}
+              {wallSlices.map(({ wall, start, end }, index) => {
+                const a = wallPoint(wall, start);
+                const b = wallPoint(wall, end);
+                const strokeWidth = Math.max(Number(wall.thickness) || 0.32, px(2));
+                const isSelectedWall = selectedWall === wall.id;
+                const style = wall.style || "solid";
+                return (
+                  <g key={`${wall.id}-${index}`}>
+                    {style === "outline" ? (
+                      <>
+                        <line
+                          x1={a.x}
+                          y1={a.y}
+                          x2={b.x}
+                          y2={b.y}
+                          stroke={C.ink}
+                          strokeWidth={strokeWidth + px(2)}
+                          strokeLinecap="square"
+                          style={{ pointerEvents: "none" }}
+                        />
+                        <line
+                          x1={a.x}
+                          y1={a.y}
+                          x2={b.x}
+                          y2={b.y}
+                          stroke={C.prop}
+                          strokeWidth={Math.max(px(1), strokeWidth * 0.38)}
+                          strokeLinecap="square"
+                          style={{ pointerEvents: "none" }}
+                        />
+                      </>
+                    ) : (
+                      <line
+                        x1={a.x}
+                        y1={a.y}
+                        x2={b.x}
+                        y2={b.y}
+                        stroke={isSelectedWall ? C.select : C.text}
+                        strokeWidth={strokeWidth}
+                        strokeOpacity={style === "translucent" ? 0.42 : 0.95}
+                        strokeLinecap="square"
+                        style={{ pointerEvents: "none" }}
+                      />
+                    )}
+                    <line
+                      data-testid={`wall-segment-${wall.id}-${index}`}
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                      stroke="transparent"
+                      strokeWidth={Math.max(strokeWidth + px(14), px(18))}
+                      onPointerDown={(event) => onWallDown(event, wall)}
+                      style={{ cursor: ["door", "window", "opening"].includes(wallTool) ? "copy" : "pointer" }}
+                    />
+                  </g>
+                );
+              })}
+
+              {/* hosted doors, windows, and pass-throughs */}
+              {openings.map((opening) => {
+                const wall = walls.find((item) => item.id === opening.wallId);
+                if (!wall) return null;
+                const point = wallPoint(wall, opening.t);
+                const width = Math.min(Number(opening.width) || 3, wallLength(wall) * 0.92);
+                const angle = wallAngle(wall);
+                const selectedOpeningNow = selectedOpening === opening.id;
+                const openingColor = opening.type === "window" ? C.actor : opening.type === "door" ? C.camera : C.dim;
+                const hingeX = opening.hinge === "end" ? width / 2 : -width / 2;
+                const leafX = opening.hinge === "end" ? -width / 2 : width / 2;
+                const leafY = opening.swing === "out" ? -width : width;
+                return (
+                  <g key={opening.id} transform={`translate(${point.x} ${point.y}) rotate(${angle})`}>
+                    <rect
+                      x={-width / 2}
+                      y={-0.75}
+                      width={width}
+                      height={1.5}
+                      fill="transparent"
+                      onPointerDown={(event) => onOpeningDown(event, opening)}
+                      style={{ cursor: "grab" }}
+                    />
+                    {opening.type === "door" ? (
+                      <>
+                        <line
+                          x1={hingeX}
+                          y1="0"
+                          x2={leafX}
+                          y2={leafY}
+                          stroke={openingColor}
+                          strokeWidth={px(1.5)}
+                          style={{ pointerEvents: "none" }}
+                        />
+                        <path
+                          d={doorArcPath(width, opening.hinge, opening.swing)}
+                          fill="none"
+                          stroke={openingColor}
+                          strokeWidth={px(1)}
+                          strokeDasharray={`${px(3)} ${px(2)}`}
+                          style={{ pointerEvents: "none" }}
+                        />
+                        <circle cx={hingeX} cy="0" r={px(2)} fill={openingColor} style={{ pointerEvents: "none" }} />
+                      </>
+                    ) : opening.type === "window" ? (
+                      <>
+                        <line
+                          x1={-width / 2}
+                          y1="0"
+                          x2={width / 2}
+                          y2="0"
+                          stroke={openingColor}
+                          strokeWidth={Math.max(px(3), 0.12)}
+                          style={{ pointerEvents: "none" }}
+                        />
+                        <line
+                          x1={-width / 2}
+                          y1={-0.2}
+                          x2={width / 2}
+                          y2={-0.2}
+                          stroke={C.text}
+                          strokeWidth={px(1)}
+                          style={{ pointerEvents: "none" }}
+                        />
+                      </>
+                    ) : (
+                      <line
+                        x1={-width / 2}
+                        y1="0"
+                        x2={width / 2}
+                        y2="0"
+                        stroke={openingColor}
+                        strokeWidth={px(1.5)}
+                        strokeDasharray={`${px(5)} ${px(3)}`}
+                        style={{ pointerEvents: "none" }}
+                      />
+                    )}
+                    {selectedOpeningNow && (
+                      <>
+                        <rect
+                          x={-width / 2 - 0.25}
+                          y={-0.25}
+                          width={0.5}
+                          height={0.5}
+                          fill={C.select}
+                          stroke={C.ink}
+                          strokeWidth={px(1)}
+                          onPointerDown={(event) => onOpeningDown(event, opening, "opening-resize")}
+                          style={{ cursor: "ew-resize" }}
+                        />
+                        <rect
+                          x={width / 2 - 0.25}
+                          y={-0.25}
+                          width={0.5}
+                          height={0.5}
+                          fill={C.select}
+                          stroke={C.ink}
+                          strokeWidth={px(1)}
+                          onPointerDown={(event) => onOpeningDown(event, opening, "opening-resize")}
+                          style={{ cursor: "ew-resize" }}
+                        />
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* editable wall nodes and midpoint translation handles */}
+              {walls.map((wall) => {
+                if (selectedWall !== wall.id) return null;
+                const midpoint = wallPoint(wall, 0.5);
+                return (
+                  <g key={`handles-${wall.id}`}>
+                    <Handle x={wall.a.x} y={wall.a.y} px={px} c={C} onDown={(event) => onWallDown(event, wall, "wall-node-a")} />
+                    <Handle x={wall.b.x} y={wall.b.y} px={px} c={C} onDown={(event) => onWallDown(event, wall, "wall-node-b")} />
+                    <rect
+                      x={midpoint.x - 0.28}
+                      y={midpoint.y - 0.28}
+                      width={0.56}
+                      height={0.56}
+                      fill={C.camera}
+                      stroke={C.ink}
+                      strokeWidth={px(1)}
+                      onPointerDown={(event) => onWallDown(event, wall, "wall-midpoint")}
+                      style={{ cursor: "move" }}
+                    />
+                  </g>
+                );
+              })}
+
+              {/* next segment preview while drawing a node-based wall chain */}
+              {wallTool === "wall" && wallDraft && wallHover && dist(wallDraft, wallHover) > 0.05 && (
+                <line
+                  x1={wallDraft.x}
+                  y1={wallDraft.y}
+                  x2={wallHover.x}
+                  y2={wallHover.y}
+                  stroke={C.camera}
+                  strokeWidth={Math.max(wallDefaults.thickness, px(2))}
+                  strokeDasharray={`${px(6)} ${px(4)}`}
+                  opacity="0.82"
+                  style={{ pointerEvents: "none" }}
+                />
+              )}
+
               {/* line of action */}
               {lg && (
                 <line
@@ -1114,10 +1942,15 @@ export default function BlockingBoard() {
               )}
 
               {/* set pieces */}
-              {objects
-                .filter((o) => o.type === "prop")
-                .map((o) => (
-                  <g key={o.id} transform={`translate(${o.x} ${o.y}) rotate(${o.rot})`}>
+              {renderedProps.map(({ object: o, presentation }) => (
+                  <g
+                    key={o.id}
+                    data-testid={`canvas-object-${o.id}`}
+                    data-layer-context={normalizeLayerContext(o.layerContext)}
+                    transform={`translate(${o.x} ${o.y}) rotate(${o.rot})`}
+                    opacity={presentation.opacity}
+                    style={{ pointerEvents: presentation.interactive ? "auto" : "none" }}
+                  >
                     {o.src ? (
                       <image
                         href={o.src}
@@ -1167,7 +2000,7 @@ export default function BlockingBoard() {
                     >
                       {o.name}
                     </text>
-                    {selected === o.id && (
+                    {selected === o.id && presentation.interactive && (
                       <>
                         <Handle x={0} y={-o.d / 2 - 1.6} px={px} c={C} onDown={(e) => onObjectDown(e, o, "rotate")} />
                         <rect
@@ -1187,12 +2020,18 @@ export default function BlockingBoard() {
                 ))}
 
               {/* actors */}
-              {actors.map((o) => {
+              {renderedActors.map(({ object: o, presentation }) => {
                 const f = facing(o.rot);
                 const isLineEnd = !!linePair && (linePair[0] === o.id || linePair[1] === o.id);
                 const r = 0.95 * Math.max(0.55, Math.min(1.5, (o.height || SUBJECT_HEIGHT) / SUBJECT_HEIGHT));
                 return (
-                  <g key={o.id}>
+                  <g
+                    key={o.id}
+                    data-testid={`canvas-object-${o.id}`}
+                    data-layer-context={normalizeLayerContext(o.layerContext)}
+                    opacity={presentation.opacity}
+                    style={{ pointerEvents: presentation.interactive ? "auto" : "none" }}
+                  >
                     {/* eyeline */}
                     <line
                       x1={o.x}
@@ -1244,7 +2083,7 @@ export default function BlockingBoard() {
                     >
                       {o.name}
                     </text>
-                    {selected === o.id && (
+                    {selected === o.id && presentation.interactive && (
                       <>
                         <Handle
                           x={o.x + f.x * 2.6}
@@ -1271,7 +2110,7 @@ export default function BlockingBoard() {
               })}
 
               {/* cameras */}
-              {cameras.map((o) => {
+              {renderedCameras.map(({ object: o, presentation }) => {
                 const h = headingFor(o);
                 const f = facing(h);
                 const s = SENSORS[o.sensor];
@@ -1283,7 +2122,13 @@ export default function BlockingBoard() {
                 const cameraColor = o.color || COLORS.camera;
                 const stroke = selected === o.id ? C.select : bad ? C.bad : cameraColor;
                 return (
-                  <g key={o.id}>
+                  <g
+                    key={o.id}
+                    data-testid={`canvas-object-${o.id}`}
+                    data-layer-context={normalizeLayerContext(o.layerContext)}
+                    opacity={presentation.opacity}
+                    style={{ pointerEvents: presentation.interactive ? "auto" : "none" }}
+                  >
                     {showCones && o.showFov !== false && (
                       <polygon
                         points={`${o.x},${o.y} ${o.x + l.x * reach},${o.y + l.y * reach} ${o.x + r.x * reach},${
@@ -1331,7 +2176,7 @@ export default function BlockingBoard() {
                     >
                       {o.name}
                     </text>
-                    {selected === o.id && (
+                    {selected === o.id && presentation.interactive && (
                       <Handle
                         x={o.x + f.x * 2.4}
                         y={o.y + f.y * 2.4}
@@ -1349,7 +2194,13 @@ export default function BlockingBoard() {
             className="absolute bottom-3 left-3 text-xs px-2 py-1 rounded"
             style={{ background: "rgba(13,18,24,0.8)", color: COLORS.dim }}
           >
-            {view.scale.toFixed(0)} px per foot. Grid square = 1 ft, heavy line = 5 ft. Drag empty space to pan, scroll to zoom.
+            {wallTool === "wall"
+              ? wallDraft
+                ? "Tap the next point to continue the wall. Esc or Finish ends the chain."
+                : "Wall tool: tap a point to begin. Grid, node, line, and 45° / 90° snap are active."
+              : ["door", "window", "opening"].includes(wallTool)
+              ? `Place ${wallTool === "opening" ? "a wall opening" : `a ${wallTool}`} on a wall.`
+              : `${view.scale.toFixed(0)} px per foot. Grid square = 1 ft, heavy line = 5 ft. Drag empty space to pan, scroll to zoom.`}
           </div>
         </div>
 
@@ -1362,8 +2213,8 @@ export default function BlockingBoard() {
             <div className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: COLORS.dim }}>
               Workspace
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-1">
-              {["shots", "scene", "stencils"].map((t) => (
+            <div className="mt-3 grid grid-cols-4 gap-1">
+              {["shots", "setdesign", "scene", "stencils"].map((t) => (
               <button
                 key={t}
                 onClick={() => setPane(t)}
@@ -1376,6 +2227,8 @@ export default function BlockingBoard() {
               >
                 {t === "shots"
                   ? "Shots"
+                  : t === "setdesign"
+                  ? "Set design"
                   : t === "scene"
                   ? "Scene"
                   : "Set pieces"}
@@ -1392,18 +2245,21 @@ export default function BlockingBoard() {
                     No shots yet. Add a camera, then select it to choose its subject, lens, movement, and color.
                   </p>
                 )}
-                {shots.map((s) => (
-                  <div
+                {shots.map((s) => {
+                  const shotEditable = canInteractWithObject(s.cam);
+                  return (
+                    <div
                     key={s.cam.id}
                     onClick={() => {
-                      setSelected(s.cam.id);
-                      setPane("object");
+                      if (shotEditable) setSelected(s.cam.id);
+                      setPreviewShot(s);
                     }}
                     className="p-2 rounded cursor-pointer"
                     style={{
                       background: selected === s.cam.id ? COLORS.panelHi : "transparent",
                       border: `1px solid ${s.crossing ? COLORS.bad : COLORS.rule}`,
                       borderLeft: `4px solid ${s.crossing ? COLORS.bad : s.cam.color || COLORS.camera}`,
+                      opacity: shotEditable ? 1 : 0.55,
                     }}
                   >
                     <div className="flex items-baseline gap-2">
@@ -1440,18 +2296,22 @@ export default function BlockingBoard() {
                       </div>
                     )}
                     <div className="flex gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                      <Btn onClick={() => moveShot(s.cam.id, -1)}>Up</Btn>
-                      <Btn onClick={() => moveShot(s.cam.id, 1)}>Down</Btn>
-                      <span className="ml-auto text-xs font-mono self-center" style={{ color: COLORS.dim }}>
-                        {s.cam.est} min
-                      </span>
+                      <Btn onClick={() => { setSelected(s.cam.id); setPane("object"); }} disabled={!shotEditable}>Edit</Btn>
+                      <Btn onClick={() => moveShot(s.cam.id, -1)} disabled={!shotEditable}>Up</Btn>
+                      <Btn onClick={() => moveShot(s.cam.id, 1)} disabled={!shotEditable}>Down</Btn>
+                      {s.cam.est !== "" && s.cam.est != null && (
+                        <span className="ml-auto text-xs font-mono self-center" style={{ color: COLORS.dim }}>
+                          {s.cam.est} min planned
+                        </span>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 {shots.length > 0 && (
                   <div className="text-xs pt-2" style={{ color: COLORS.dim, borderTop: `1px solid ${COLORS.rule}` }}>
-                    {shots.length} setups {"\u00b7"} {totalEst} minutes estimated {"\u00b7"} shooting order sets the
-                    slate letters
+                    {shots.length} setups
+                    {hasPlannedMinutes ? ` · ${plannedMinutes} user-entered minutes` : ""} · shooting order sets the slate letters
                   </div>
                 )}
               </>
@@ -1481,6 +2341,11 @@ export default function BlockingBoard() {
                 <p className="text-xs" style={{ color: COLORS.dim }}>
                   {catalogNote}
                 </p>
+                <p className="text-xs leading-relaxed" style={{ color: layerMode === CINEMATOGRAPHY ? COLORS.actor : COLORS.dim }}>
+                  {layerMode === CINEMATOGRAPHY
+                    ? "Cinematography mode exposes blocking, camera, lighting, grip, movement, and rigging stencils."
+                    : "Director mode shows staging essentials. Turn Cinematography on to add lighting, grip, movement, and rigging stencils."}
+                </p>
 
                 {stencilGroups.length === 0 && (
                   <p className="text-xs" style={{ color: COLORS.dim }}>
@@ -1499,6 +2364,7 @@ export default function BlockingBoard() {
                           key={st.id}
                           onClick={() => placeStencil(st)}
                           title={`${st.name}, ${st.w} by ${st.d} ft`}
+                          data-testid={`stencil-${st.id.replace(/[^a-z0-9]+/gi, "-")}`}
                           className="p-1 rounded flex flex-col items-center gap-1"
                           style={{ background: COLORS.panelHi, border: `1px solid ${COLORS.rule}` }}
                         >
@@ -1519,6 +2385,245 @@ export default function BlockingBoard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {pane === "setdesign" && (
+              <div className="space-y-4">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: COLORS.camera }}>
+                    Set designer
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: COLORS.dim }}>
+                    Build a linked overhead set with point-to-point walls. Doors, windows, and pass-throughs remain hosted to their wall as the geometry changes.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Btn onClick={() => { setWallTool("select"); setWallDraft(null); }} active={wallTool === "select"}>
+                    Select / edit
+                  </Btn>
+                  <Btn onClick={() => setWallTool("wall")} active={wallTool === "wall"} accent>
+                    Draw walls
+                  </Btn>
+                  <Btn onClick={() => { setWallTool("door"); setWallDraft(null); }} active={wallTool === "door"}>
+                    Add door
+                  </Btn>
+                  <Btn onClick={() => { setWallTool("window"); setWallDraft(null); }} active={wallTool === "window"}>
+                    Add window
+                  </Btn>
+                  <Btn onClick={() => { setWallTool("opening"); setWallDraft(null); }} active={wallTool === "opening"}>
+                    Wall opening
+                  </Btn>
+                  <Btn onClick={() => blueprintRef.current?.click()} active={!!blueprint}>
+                    Import blueprint
+                  </Btn>
+                </div>
+
+                {wallTool === "wall" && (
+                  <div className="flex items-center justify-between gap-2 rounded p-2" style={{ background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}>
+                    <span className="text-xs" style={{ color: COLORS.dim }}>
+                      {wallDraft ? "Chain in progress" : "Ready for first point"}
+                    </span>
+                    <Btn onClick={() => { setWallDraft(null); setWallHover(null); }} disabled={!wallDraft}>
+                      Finish wall
+                    </Btn>
+                  </div>
+                )}
+
+                <div className="rounded p-3 space-y-3" style={{ background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}>
+                  <div className="text-xs uppercase tracking-wider" style={{ color: COLORS.text }}>Snap engine</div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                    {[
+                      ["grid", "Grid alignment"],
+                      ["nodes", "Node magnetism"],
+                      ["lines", "Wall-line snap"],
+                      ["angles", "45° / 90° angles"],
+                    ].map(([key, label]) => (
+                      <label key={key} className="flex items-center gap-2 text-xs" style={{ color: COLORS.dim }}>
+                        <input
+                          type="checkbox"
+                          checked={snap[key]}
+                          onChange={(event) => setSnap((current) => ({ ...current, [key]: event.target.checked }))}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label={`New wall thickness ${wallDefaults.thickness.toFixed(2)} ft`}>
+                    <input
+                      type="range"
+                      min="0.12"
+                      max="0.9"
+                      step="0.02"
+                      value={wallDefaults.thickness}
+                      onChange={(event) => setWallDefaults((current) => ({ ...current, thickness: +event.target.value }))}
+                      className="w-full"
+                    />
+                  </Field>
+                  <Field label="New wall display">
+                    <Sel
+                      value={wallDefaults.style}
+                      options={["solid", "outline", "translucent"]}
+                      onChange={(style) => setWallDefaults((current) => ({ ...current, style }))}
+                    />
+                  </Field>
+                </div>
+
+                {blueprint && (
+                  <div className="rounded p-3 space-y-3" style={{ background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs uppercase tracking-wider" style={{ color: COLORS.text }}>Blueprint underlay</div>
+                      <Btn onClick={() => { recordUndo("remove-blueprint"); setBlueprint(null); }} danger>
+                        Remove
+                      </Btn>
+                    </div>
+                    <Field label={`Scale / width ${blueprint.width.toFixed(1)} ft`}>
+                      <input
+                        type="range"
+                        min="5"
+                        max="120"
+                        step="0.5"
+                        value={blueprint.width}
+                        onChange={(event) => {
+                          const width = +event.target.value;
+                          patchBlueprint({ width, height: +(blueprint.height * (width / blueprint.width)).toFixed(2) });
+                        }}
+                        className="w-full"
+                      />
+                    </Field>
+                    <Field label={`Opacity ${Math.round(blueprint.opacity * 100)}%`}>
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="0.85"
+                        step="0.05"
+                        value={blueprint.opacity}
+                        onChange={(event) => patchBlueprint({ opacity: +event.target.value })}
+                        className="w-full"
+                      />
+                    </Field>
+                    <p className="text-xs leading-relaxed" style={{ color: COLORS.dim }}>
+                      Align the imported plan to the one-foot grid, then trace the perimeter with the Wall tool. Save scene keeps the underlay with the floor plan.
+                    </p>
+                  </div>
+                )}
+
+                {!selectedWallData && !selectedOpeningData && (
+                  <div className="rounded p-3 text-xs leading-relaxed" style={{ background: COLORS.panelHi, color: COLORS.dim, border: `1px solid ${COLORS.rule}` }}>
+                    {walls.length
+                      ? `${walls.length} wall segment${walls.length === 1 ? "" : "s"} and ${openings.length} hosted opening${openings.length === 1 ? "" : "s"}. Tap a wall to move its endpoints or midpoint.`
+                      : "Start with Draw walls, tap each exterior corner in sequence, then press Finish wall. Select a wall and use Extrude to pull an interior branch."}
+                  </div>
+                )}
+
+                {selectedWallData && (
+                  <div className="rounded p-3 space-y-3" style={{ background: COLORS.panelHi, border: `1px solid ${COLORS.camera}` }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs uppercase tracking-wider" style={{ color: COLORS.dim }}>Selected wall</div>
+                        <div className="text-sm font-semibold" style={{ color: COLORS.text }}>
+                          {wallLength(selectedWallData).toFixed(1)} ft · {wallAngle(selectedWallData).toFixed(0)}°
+                        </div>
+                      </div>
+                      <Btn onClick={() => { setSelectedWall(null); setWallTool("select"); }}>Done</Btn>
+                    </div>
+                    <Field label={`Thickness ${Number(selectedWallData.thickness || 0.32).toFixed(2)} ft`}>
+                      <input
+                        type="range"
+                        min="0.12"
+                        max="0.9"
+                        step="0.02"
+                        value={selectedWallData.thickness || 0.32}
+                        onChange={(event) => patchWall(selectedWallData.id, { thickness: +event.target.value })}
+                        className="w-full"
+                      />
+                    </Field>
+                    <Field label="Wall display">
+                      <Sel
+                        value={selectedWallData.style || "solid"}
+                        options={["solid", "outline", "translucent"]}
+                        onChange={(style) => patchWall(selectedWallData.id, { style })}
+                      />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Btn
+                        onClick={() => {
+                          const midpoint = wallPoint(selectedWallData, 0.5);
+                          setWallDraft(midpoint);
+                          setWallHover(null);
+                          setWallTool("wall");
+                        }}
+                        accent
+                      >
+                        Extrude from midpoint
+                      </Btn>
+                      <Btn onClick={() => removeWall(selectedWallData.id)} danger>
+                        Delete wall
+                      </Btn>
+                    </div>
+                    <p className="text-xs leading-relaxed" style={{ color: COLORS.dim }}>
+                      Circle handles reshape every wall joined at that node. The square midpoint shifts this segment; attached doors and windows stay proportional to their host wall.
+                    </p>
+                  </div>
+                )}
+
+                {selectedOpeningData && (
+                  <div className="rounded p-3 space-y-3" style={{ background: COLORS.panelHi, border: `1px solid ${COLORS.actor}` }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs uppercase tracking-wider" style={{ color: COLORS.dim }}>Hosted {selectedOpeningData.type}</div>
+                        <div className="text-sm font-semibold capitalize" style={{ color: COLORS.text }}>
+                          {selectedOpeningData.type} · {Number(selectedOpeningData.width).toFixed(1)} ft
+                        </div>
+                      </div>
+                      <Btn onClick={() => setSelectedOpening(null)}>Done</Btn>
+                    </div>
+                    <Field label={`Aperture width ${Number(selectedOpeningData.width).toFixed(1)} ft`}>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max={Math.max(1, wallLength(walls.find((wall) => wall.id === selectedOpeningData.wallId) || { a: { x: 0, y: 0 }, b: { x: 8, y: 0 } }) * 0.92)}
+                        step="0.1"
+                        value={selectedOpeningData.width}
+                        onChange={(event) => patchOpening(selectedOpeningData.id, { width: +event.target.value })}
+                        className="w-full"
+                      />
+                    </Field>
+                    {selectedOpeningData.type === "door" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Field label="Swing">
+                          <Sel
+                            value={selectedOpeningData.swing || "in"}
+                            options={["in", "out"]}
+                            onChange={(swing) => patchOpening(selectedOpeningData.id, { swing })}
+                          />
+                        </Field>
+                        <Field label="Hinge side">
+                          <Sel
+                            value={selectedOpeningData.hinge || "start"}
+                            options={["start", "end"]}
+                            onChange={(hinge) => patchOpening(selectedOpeningData.id, { hinge })}
+                          />
+                        </Field>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Btn onClick={() => setWallTool(selectedOpeningData.type === "opening" ? "opening" : selectedOpeningData.type)} active>
+                        Slide on wall
+                      </Btn>
+                      <Btn onClick={() => removeOpening(selectedOpeningData.id)} danger>
+                        Delete {selectedOpeningData.type}
+                      </Btn>
+                    </div>
+                    <p className="text-xs leading-relaxed" style={{ color: COLORS.dim }}>
+                      Drag the element to slide it along this wall or onto another wall. Square end handles resize the aperture and cut geometry updates immediately.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1567,9 +2672,19 @@ export default function BlockingBoard() {
                   </span>
                   . Letters I and O are skipped, and after Z they double to AA, BB.
                 </p>
-                <Btn onClick={printShotList} accent>
-                  Print shot list
-                </Btn>
+                <div className="pt-1 space-y-2">
+                  <label className="flex items-center gap-2 text-xs" style={{ color: COLORS.dim }}>
+                    <input
+                      type="checkbox"
+                      checked={includePrevisInPrint}
+                      onChange={(e) => setIncludePrevisInPrint(e.target.checked)}
+                    />
+                    Include 3D previs frames in PDF
+                  </label>
+                  <Btn onClick={printShotList} accent>
+                    Print / save PDF
+                  </Btn>
+                </div>
                 <details className="pt-3" style={{ borderTop: `1px solid ${COLORS.rule}` }}>
                   <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.text }}>
                     Screen direction and 180 line
@@ -1652,6 +2767,47 @@ export default function BlockingBoard() {
                   />
                 </Field>
 
+                <Field label="Layer context">
+                  <select
+                    value={normalizeLayerContext(sel.layerContext)}
+                    onChange={(e) => patch(sel.id, { layerContext: e.target.value })}
+                    data-testid="select-object-layer-context"
+                    className="w-full px-2 py-1 rounded text-sm"
+                    style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                  >
+                    <option value={DIRECTOR}>Director</option>
+                    <option value={CINEMATOGRAPHY}>Cinematography</option>
+                    <option value="BOTH">Both layers</option>
+                  </select>
+                </Field>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label
+                    className="h-9 px-2 rounded flex items-center gap-2 text-xs"
+                    style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={sel.isVisible !== false}
+                      onChange={(e) => patch(sel.id, { isVisible: e.target.checked })}
+                      data-testid="checkbox-object-visible"
+                    />
+                    Visible
+                  </label>
+                  <label
+                    className="h-9 px-2 rounded flex items-center gap-2 text-xs"
+                    style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!sel.isLocked}
+                      onChange={(e) => patch(sel.id, { isLocked: e.target.checked })}
+                      data-testid="checkbox-object-locked"
+                    />
+                    Lock object
+                  </label>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="X (ft)">
                     <Num value={sel.x} step={0.5} onChange={(v) => moveObject(sel.id, v, sel.y)} />
@@ -1678,6 +2834,15 @@ export default function BlockingBoard() {
 
                 {sel.type === "camera" && (
                   <>
+                    <Btn
+                      onClick={() => {
+                        const shot = shots.find((s) => s.cam.id === sel.id);
+                        if (shot) setPreviewShot(shot);
+                      }}
+                      accent
+                    >
+                      Open 3D previs
+                    </Btn>
                     <Field label="Lens">
                       <select
                         value={sel.focal}
@@ -1757,8 +2922,20 @@ export default function BlockingBoard() {
                           onChange={(v) => patch(sel.id, { support: v })}
                         />
                       </Field>
-                      <Field label="Est. minutes">
-                        <Num value={sel.est} step={5} onChange={(v) => patch(sel.id, { est: Math.max(0, v) })} />
+                      <Field label="Planning minutes (optional)">
+                        <input
+                          type="number"
+                          min="0"
+                          step="5"
+                          value={sel.est ?? ""}
+                          placeholder="You decide"
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            patch(sel.id, { est: raw === "" ? "" : Math.max(0, +raw) });
+                          }}
+                          className="w-full px-2 py-1 rounded text-sm font-mono"
+                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                        />
                       </Field>
                     </div>
                     <label className="flex items-center gap-2 text-xs" style={{ color: COLORS.dim }}>
@@ -1838,6 +3015,13 @@ export default function BlockingBoard() {
 
                 {sel.type === "actor" && (
                   <>
+                    <Field label="Previs character">
+                      <Sel
+                        value={sel.gender || "female"}
+                        options={["female", "male"]}
+                        onChange={(v) => patch(sel.id, { gender: v })}
+                      />
+                    </Field>
                     <Field label={`Subject height ${(sel.height || SUBJECT_HEIGHT).toFixed(1)} ft`}>
                       <input
                         type="range"
@@ -1864,7 +3048,7 @@ export default function BlockingBoard() {
                   </>
                 )}
 
-                <Btn onClick={() => removeObject(sel.id)} danger>
+                <Btn onClick={() => removeObject(sel.id)} danger disabled={!canInteractWithObject(sel)}>
                   Delete
                 </Btn>
               </div>
@@ -1873,17 +3057,27 @@ export default function BlockingBoard() {
           </div>
         </aside>
       </div>
+      {previewShot && (
+        <PrevisWindow
+          shot={previewShot}
+          objects={objects}
+          walls={walls}
+          openings={openings}
+          onClose={() => setPreviewShot(null)}
+        />
+      )}
     </div>
   );
 }
 
 /* ---------------- small pieces ---------------- */
 
-function Btn({ children, onClick, disabled, accent, danger, active }) {
+function Btn({ children, onClick, disabled, accent, danger, active, ...buttonProps }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
+      {...buttonProps}
       className="px-2 py-1 rounded text-xs font-medium"
       style={{
         background: danger
