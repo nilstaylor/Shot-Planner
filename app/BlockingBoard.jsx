@@ -569,6 +569,7 @@ export default function BlockingBoard() {
 
   const svgRef = useRef(null);
   const drag = useRef(null);
+  const longPress = useRef(null);
   const fileRef = useRef(null);
   const pngRef = useRef(null);
   const blueprintRef = useRef(null);
@@ -577,6 +578,13 @@ export default function BlockingBoard() {
   const sharedSceneLoadedRef = useRef(false);
   const playbackStartedAtRef = useRef(null);
   const playbackFrameRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (longPress.current?.timer) window.clearTimeout(longPress.current.timer);
+    },
+    []
+  );
 
   const snapshot = useCallback(
     () => JSON.parse(JSON.stringify({ objects, walls, openings, line, meta, blueprint })),
@@ -1216,19 +1224,23 @@ export default function BlockingBoard() {
     setPathPlayback({ cameraId: null, actorId, progress, playing: true });
   };
 
-  const openObjectContextMenu = (event, object) => {
+  const showObjectContextMenu = (object, clientX, clientY) => {
     if (!canInteractWithObject(object)) return;
-    event.preventDefault();
-    event.stopPropagation();
     setSelected(object.id);
     setSelectedWall(null);
     setSelectedOpening(null);
     setPane("object");
     setContextMenu({
       id: object.id,
-      x: Math.max(8, Math.min(event.clientX, window.innerWidth - 236)),
-      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 280)),
+      x: Math.max(8, Math.min(clientX, window.innerWidth - 236)),
+      y: Math.max(8, Math.min(clientY, window.innerHeight - 280)),
     });
+  };
+
+  const openObjectContextMenu = (event, object) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showObjectContextMenu(object, event.clientX, event.clientY);
   };
 
   const faceNearestCamera = (actorId) => {
@@ -1294,10 +1306,39 @@ export default function BlockingBoard() {
 
   /* ---- pointer handling ---- */
 
+  const clearObjectLongPress = () => {
+    if (longPress.current?.timer) window.clearTimeout(longPress.current.timer);
+    longPress.current = null;
+  };
+
+  const beginObjectLongPress = (event, object) => {
+    if (event.pointerType !== "touch" || !canInteractWithObject(object)) return;
+    clearObjectLongPress();
+    const pointerId = event.pointerId;
+    const x = event.clientX;
+    const y = event.clientY;
+    const timer = window.setTimeout(() => {
+      const pending = longPress.current;
+      if (!pending || pending.pointerId !== pointerId) return;
+      longPress.current = null;
+      drag.current = null;
+      showObjectContextMenu(object, pending.x, pending.y);
+      window.navigator?.vibrate?.(12);
+    }, 550);
+    longPress.current = { timer, pointerId, x, y };
+  };
+
+  const cancelLongPressOnMove = (event) => {
+    const pending = longPress.current;
+    if (!pending || pending.pointerId !== event.pointerId) return;
+    if (Math.hypot(event.clientX - pending.x, event.clientY - pending.y) > 12) clearObjectLongPress();
+  };
+
   const onObjectDown = (e, o, mode) => {
-    if (e.button !== 0) return;
+    if (e.pointerType !== "touch" && e.button !== 0) return;
     if (!canInteractWithObject(o)) return;
     e.stopPropagation();
+    if (mode === "move") beginObjectLongPress(e, o);
     const w = toWorld(e);
     setSelected(o.id);
     setSelectedWall(null);
@@ -1318,7 +1359,7 @@ export default function BlockingBoard() {
   };
 
   const onMotionMarkDown = (e, target, mark, mode = "motion-mark-move") => {
-    if (e.button !== 0) return;
+    if (e.pointerType !== "touch" && e.button !== 0) return;
     if (!canInteractWithObject(target)) return;
     e.stopPropagation();
     setSelected(target.id);
@@ -1406,7 +1447,7 @@ export default function BlockingBoard() {
   };
 
   const onCanvasDown = (e) => {
-    if (e.button !== 0) return;
+    if (e.pointerType !== "touch" && e.button !== 0) return;
     const point = toWorld(e);
     const pathEditObjectId = pathEditCameraId || pathEditActorId;
     if (pathEditObjectId) {
@@ -1465,6 +1506,7 @@ export default function BlockingBoard() {
   };
 
   const onMove = (e) => {
+    cancelLongPressOnMove(e);
     const d = drag.current;
     if (!d) {
       if (wallTool === "wall") setWallHover(snapWorld(toWorld(e), wallDraft));
@@ -1598,7 +1640,8 @@ export default function BlockingBoard() {
     }
   };
 
-  const onUp = () => {
+  const onUp = (event) => {
+    if (!event || !longPress.current || longPress.current.pointerId === event.pointerId) clearObjectLongPress();
     if (drag.current?.changed) pushSnapshot(drag.current.before, "drag");
     drag.current = null;
   };
@@ -2291,6 +2334,7 @@ ${previs}
             onPointerMove={onMove}
             onPointerUp={onUp}
             onPointerLeave={onUp}
+            onPointerCancel={onUp}
             onContextMenu={(event) => event.preventDefault()}
           >
             <rect x="0" y="0" width="100%" height="100%" fill={C.ink} />
@@ -2309,8 +2353,22 @@ ${previs}
             </defs>
 
             <g transform={`translate(${view.x % (view.scale * 5)} ${view.y % (view.scale * 5)})`}>
-              <rect x={-view.scale * 5} y={-view.scale * 5} width="400%" height="400%" fill="url(#fine)" />
-              <rect x={-view.scale * 5} y={-view.scale * 5} width="400%" height="400%" fill="url(#coarse)" />
+              <rect
+                x={-view.scale * 5}
+                y={-view.scale * 5}
+                width="400%"
+                height="400%"
+                fill="url(#fine)"
+                style={{ pointerEvents: "none" }}
+              />
+              <rect
+                x={-view.scale * 5}
+                y={-view.scale * 5}
+                width="400%"
+                height="400%"
+                fill="url(#coarse)"
+                style={{ pointerEvents: "none" }}
+              />
             </g>
 
             <g transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}>
