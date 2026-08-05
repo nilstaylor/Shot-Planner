@@ -125,6 +125,10 @@ function material(color, options = {}) {
   });
 }
 
+function colorVariant(color, multiplier = 1) {
+  return new THREE.Color(color).multiplyScalar(multiplier).getStyle();
+}
+
 function addMesh(group, geometry, meshMaterial, position = [0, 0, 0], rotation = [0, 0, 0]) {
   const mesh = new THREE.Mesh(geometry, meshMaterial);
   mesh.position.set(...position);
@@ -146,6 +150,20 @@ function addCylinderBetween(group, start, end, radius, meshMaterial, radialSegme
   return mesh;
 }
 
+function addTaperedCylinderBetween(group, start, end, startRadius, endRadius, meshMaterial, radialSegments = 12) {
+  const direction = end.clone().sub(start);
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(endRadius, startRadius, direction.length(), radialSegments),
+    meshMaterial
+  );
+  mesh.position.copy(start.clone().add(end).multiplyScalar(0.5));
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
 function makeActor(actor, isSubject = false) {
   const group = new THREE.Group();
   const appearance = appearanceForActor(actor);
@@ -155,84 +173,102 @@ function makeActor(actor, isSubject = false) {
   const garment = material(appearance.wardrobe.color, { roughness: 0.85 });
   const garmentDark = material(appearance.wardrobe.accent, { roughness: 0.86 });
   const skin = material(appearance.skin.color, { roughness: 0.94 });
+  const skinShade = material(colorVariant(appearance.skin.color, 0.78), { roughness: 0.96 });
   const hair = material(appearance.hairColor.color, { roughness: 0.96 });
+  const hairHighlight = material(colorVariant(appearance.hairColor.color, 1.28), { roughness: 0.9 });
   const shoe = material("#151d25", { roughness: 0.92 });
   const accent = material(palette.amber, { roughness: 0.45, metalness: 0.1 });
+  const garmentHighlight = material(colorVariant(appearance.wardrobe.color, 1.16), { roughness: 0.78 });
   const eyeWhite = material("#e9eef0", { roughness: 0.6 });
   const iris = material("#314553", { roughness: 0.42, metalness: 0.05 });
+  const eyeSocket = material(colorVariant(appearance.skin.color, 0.62), { roughness: 0.96 });
   const brow = material(appearance.hairColor.color, { roughness: 0.9 });
   const lip = material(appearance.skin.id === "deep" ? "#9b5b57" : "#a85e59", { roughness: 0.74 });
 
   // Rounded anatomical proportions read as people at both close and wide previs distances.
   for (const side of [-1, 1]) {
-    addMesh(group, new THREE.CapsuleGeometry(0.105 * scale, 0.22 * scale, 6, 10), shoe, [side * 0.16 * scale, 0.14 * scale, 0.08 * scale], [0, 0, Math.PI / 2]);
-    addCylinderBetween(
+    addMesh(group, new THREE.CapsuleGeometry(0.11 * scale, 0.26 * scale, 7, 12), shoe, [side * 0.16 * scale, 0.14 * scale, 0.09 * scale], [0, 0, Math.PI / 2]);
+    addTaperedCylinderBetween(
       group,
       new THREE.Vector3(side * 0.16 * scale, 0.22 * scale, 0),
       new THREE.Vector3(side * 0.17 * scale, 1.35 * scale, -0.015 * scale),
-      0.12 * scale * silhouette,
+      0.105 * scale * silhouette,
+      0.14 * scale * silhouette,
       garmentDark,
       14
     );
-    addCylinderBetween(
+    addTaperedCylinderBetween(
       group,
       new THREE.Vector3(side * 0.17 * scale, 1.35 * scale, -0.015 * scale),
       new THREE.Vector3(side * 0.15 * scale, 2.45 * scale, 0),
-      0.135 * scale * silhouette,
+      0.15 * scale * silhouette,
+      0.18 * scale * silhouette,
       garmentDark,
       14
     );
-    addMesh(group, new THREE.SphereGeometry(0.14 * scale * silhouette, 14, 10), garmentDark, [side * 0.17 * scale, 1.35 * scale, -0.015 * scale]);
+    addMesh(group, new THREE.SphereGeometry(0.145 * scale * silhouette, 16, 12), garmentDark, [side * 0.17 * scale, 1.35 * scale, -0.015 * scale]);
   }
-  addMesh(group, new THREE.SphereGeometry(0.34 * scale * silhouette, 16, 12), garment, [0, 2.38 * scale, 0]);
+  addMesh(group, new THREE.SphereGeometry(0.35 * scale * silhouette, 18, 14), garment, [0, 2.38 * scale, 0]);
   const torso = addMesh(
     group,
-    new THREE.CapsuleGeometry(0.42 * scale * silhouette, 0.9 * scale, 8, 14),
+    new THREE.CapsuleGeometry(0.43 * scale * silhouette, 0.92 * scale, 10, 18),
     garment,
     [0, 3.34 * scale, 0]
   );
-  torso.scale.set(1, 1, 0.82);
-  addMesh(group, new THREE.SphereGeometry(0.43 * scale * silhouette, 16, 12), garment, [0, 3.92 * scale, 0]);
+  torso.scale.set(1, 1, 0.8);
+  addMesh(group, new THREE.SphereGeometry(0.44 * scale * silhouette, 18, 14), garment, [0, 3.92 * scale, 0]);
+  addMesh(group, new THREE.BoxGeometry(0.09 * scale, 1.0 * scale, 0.025 * scale), garmentHighlight, [0, 3.42 * scale, -0.36 * scale]);
   for (const side of [-1, 1]) {
-    addMesh(group, new THREE.SphereGeometry(0.18 * scale, 12, 10), garment, [side * 0.44 * scale * silhouette, 3.94 * scale, 0]);
-    addCylinderBetween(
+    addMesh(group, new THREE.SphereGeometry(0.185 * scale, 14, 12), garment, [side * 0.44 * scale * silhouette, 3.94 * scale, 0]);
+    addTaperedCylinderBetween(
       group,
       new THREE.Vector3(side * 0.46 * scale * silhouette, 3.87 * scale, 0),
       new THREE.Vector3(side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale),
-      0.12 * scale,
+      0.14 * scale,
+      0.105 * scale,
       garment,
       14
     );
-    addMesh(group, new THREE.SphereGeometry(0.12 * scale, 12, 10), garment, [side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale]);
-    addCylinderBetween(
+    addMesh(group, new THREE.SphereGeometry(0.125 * scale, 14, 12), garment, [side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale]);
+    addTaperedCylinderBetween(
       group,
       new THREE.Vector3(side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale),
       new THREE.Vector3(side * 0.7 * scale * silhouette, 2.42 * scale, -0.1 * scale),
-      0.09 * scale,
+      0.095 * scale,
+      0.075 * scale,
       skin,
       12
     );
-    addMesh(group, new THREE.SphereGeometry(0.105 * scale, 12, 10), skin, [side * 0.7 * scale * silhouette, 2.35 * scale, -0.1 * scale]);
+    addMesh(group, new THREE.SphereGeometry(0.11 * scale, 14, 12), skin, [side * 0.7 * scale * silhouette, 2.35 * scale, -0.1 * scale]);
   }
-  addMesh(group, new THREE.CapsuleGeometry(0.105 * scale, 0.14 * scale, 6, 10), skin, [0, 4.43 * scale, 0]);
+  addMesh(group, new THREE.CapsuleGeometry(0.11 * scale, 0.16 * scale, 8, 12), skin, [0, 4.43 * scale, 0]);
   const headY = 4.84 * scale;
-  const head = addMesh(group, new THREE.SphereGeometry(0.36 * scale, 24, 18), skin, [0, headY, 0]);
-  head.scale.set(0.92, 1.1, 0.92);
+  const head = addMesh(group, new THREE.SphereGeometry(0.365 * scale, 28, 22), skin, [0, headY, 0]);
+  head.scale.set(0.93, 1.12, 0.94);
+  const jaw = addMesh(group, new THREE.SphereGeometry(0.285 * scale, 22, 16), skin, [0, 4.67 * scale, -0.012 * scale]);
+  jaw.scale.set(0.92, 0.62, 0.86);
   for (const side of [-1, 1]) {
-    addMesh(group, new THREE.SphereGeometry(0.07 * scale, 12, 10), skin, [side * 0.34 * scale, headY, 0]);
+    addMesh(group, new THREE.SphereGeometry(0.07 * scale, 14, 12), skin, [side * 0.345 * scale, headY, 0]);
+    addMesh(group, new THREE.SphereGeometry(0.034 * scale, 10, 8), skinShade, [side * 0.365 * scale, headY, -0.01 * scale]);
   }
-  const faceZ = -0.325 * scale;
+  const faceZ = -0.345 * scale;
   for (const side of [-1, 1]) {
-    addMesh(group, new THREE.SphereGeometry(0.048 * scale, 12, 10), eyeWhite, [side * 0.115 * scale, 4.9 * scale, faceZ]);
-    addMesh(group, new THREE.SphereGeometry(0.024 * scale, 10, 8), iris, [side * 0.115 * scale, 4.9 * scale, -0.369 * scale]);
-    addMesh(group, new THREE.BoxGeometry(0.12 * scale, 0.022 * scale, 0.02 * scale), brow, [side * 0.115 * scale, 5.02 * scale, -0.345 * scale], [0, 0, side * -0.14]);
+    const socket = addMesh(group, new THREE.SphereGeometry(0.072 * scale, 14, 10), eyeSocket, [side * 0.12 * scale, 4.91 * scale, -0.315 * scale]);
+    socket.scale.set(1.2, 0.58, 0.34);
+    const eye = addMesh(group, new THREE.SphereGeometry(0.052 * scale, 14, 10), eyeWhite, [side * 0.12 * scale, 4.9 * scale, faceZ]);
+    eye.scale.set(1.08, 0.72, 0.48);
+    addMesh(group, new THREE.SphereGeometry(0.026 * scale, 12, 10), iris, [side * 0.12 * scale, 4.9 * scale, -0.382 * scale]);
+    addMesh(group, new THREE.BoxGeometry(0.13 * scale, 0.024 * scale, 0.022 * scale), brow, [side * 0.12 * scale, 5.02 * scale, -0.36 * scale], [0, 0, side * -0.14]);
   }
-  addMesh(group, new THREE.SphereGeometry(0.04 * scale, 10, 8), skin, [0, 4.82 * scale, -0.36 * scale]);
-  addMesh(group, new THREE.BoxGeometry(0.12 * scale, 0.025 * scale, 0.02 * scale), lip, [0, 4.67 * scale, -0.35 * scale]);
+  addMesh(group, new THREE.ConeGeometry(0.055 * scale, 0.12 * scale, 10), skinShade, [0, 4.82 * scale, -0.375 * scale], [-Math.PI / 2, 0, 0]);
+  addMesh(group, new THREE.SphereGeometry(0.043 * scale, 12, 10), skin, [0, 4.78 * scale, -0.382 * scale]);
+  addMesh(group, new THREE.BoxGeometry(0.13 * scale, 0.022 * scale, 0.022 * scale), lip, [0, 4.65 * scale, -0.365 * scale]);
+  addMesh(group, new THREE.BoxGeometry(0.08 * scale, 0.02 * scale, 0.018 * scale), skinShade, [0, 4.56 * scale, -0.35 * scale]);
   if (appearance.hairStyle === "long" || appearance.hairStyle === "braids") {
     addMesh(group, new THREE.SphereGeometry(0.39 * scale, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, [0, headY, 0.06 * scale]);
     if (appearance.hairStyle === "long") {
       addMesh(group, new THREE.CapsuleGeometry(0.18 * scale, 0.74 * scale, 6, 12), hair, [0, 4.38 * scale, 0.13 * scale]);
+      addMesh(group, new THREE.CapsuleGeometry(0.06 * scale, 0.58 * scale, 6, 10), hairHighlight, [0.27 * scale, 4.4 * scale, 0.07 * scale]);
     } else {
       for (const side of [-1, 1]) {
         addCylinderBetween(group, new THREE.Vector3(side * 0.22 * scale, 4.69 * scale, 0.1 * scale), new THREE.Vector3(side * 0.28 * scale, 3.87 * scale, 0.12 * scale), 0.047 * scale, hair, 7);
@@ -245,19 +281,33 @@ function makeActor(actor, isSubject = false) {
     [[-0.2, 0.04], [0, 0.12], [0.2, 0.04], [-0.12, -0.15], [0.12, -0.15]].forEach(([x, z]) => {
       addMesh(group, new THREE.SphereGeometry(0.18 * scale, 10, 8), hair, [x * scale, headY + 0.05 * scale, z * scale]);
     });
+    addMesh(group, new THREE.SphereGeometry(0.1 * scale, 10, 8), hairHighlight, [-0.18 * scale, 5.1 * scale, -0.02 * scale]);
   } else if (appearance.hairStyle === "wave") {
     addMesh(group, new THREE.SphereGeometry(0.38 * scale, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, [0, headY, 0.035 * scale]);
     addMesh(group, new THREE.SphereGeometry(0.17 * scale, 10, 8), hair, [0.25 * scale, 4.73 * scale, -0.08 * scale]);
+    addMesh(group, new THREE.CapsuleGeometry(0.035 * scale, 0.25 * scale, 5, 8), hairHighlight, [-0.17 * scale, 5.08 * scale, -0.17 * scale], [0, 0, -0.38]);
   } else {
     const capHeight = appearance.hairStyle === "buzz" ? Math.PI * 0.34 : Math.PI * 0.48;
     addMesh(group, new THREE.SphereGeometry(0.375 * scale, 18, 12, 0, Math.PI * 2, 0, capHeight), hair, [0, headY, 0.035 * scale]);
+    if (appearance.hairStyle !== "buzz") {
+      addMesh(group, new THREE.BoxGeometry(0.22 * scale, 0.04 * scale, 0.08 * scale), hairHighlight, [-0.12 * scale, 5.1 * scale, -0.22 * scale], [0, 0, -0.18]);
+    }
   }
   if (appearance.wardrobe.id === "formal") {
     addMesh(group, new THREE.BoxGeometry(0.08 * scale, 0.62 * scale, 0.08 * scale), accent, [0, 3.72 * scale, -0.43 * scale]);
+    for (const side of [-1, 1]) {
+      addMesh(group, new THREE.BoxGeometry(0.12 * scale, 0.48 * scale, 0.035 * scale), garmentHighlight, [side * 0.19 * scale * silhouette, 3.78 * scale, -0.38 * scale], [0, 0, side * 0.28]);
+    }
   } else if (appearance.wardrobe.id === "outerwear") {
     addMesh(group, new THREE.BoxGeometry(0.68 * scale * silhouette, 0.12 * scale, 0.52 * scale), garmentDark, [0, 3.9 * scale, 0]);
+    addMesh(group, new THREE.TorusGeometry(0.27 * scale, 0.045 * scale, 8, 18, Math.PI), garmentHighlight, [0, 4.12 * scale, -0.17 * scale], [0, 0, Math.PI]);
   } else if (appearance.wardrobe.id === "workwear") {
     addMesh(group, new THREE.BoxGeometry(0.32 * scale, 0.36 * scale, 0.045 * scale), garmentDark, [0.22 * scale * silhouette, 3.35 * scale, -0.43 * scale]);
+    addMesh(group, new THREE.BoxGeometry(0.18 * scale, 0.05 * scale, 0.035 * scale), garmentHighlight, [0.22 * scale * silhouette, 3.5 * scale, -0.46 * scale]);
+  } else if (appearance.wardrobe.id === "evening") {
+    addMesh(group, new THREE.TorusGeometry(0.19 * scale, 0.028 * scale, 6, 18, Math.PI), garmentHighlight, [0, 4.08 * scale, -0.17 * scale], [0, 0, Math.PI]);
+  } else if (appearance.wardrobe.id === "casual") {
+    addMesh(group, new THREE.TorusGeometry(0.16 * scale, 0.022 * scale, 6, 16, Math.PI), garmentDark, [0, 4.08 * scale, -0.17 * scale], [0, 0, Math.PI]);
   }
   if (isSubject) {
     addMesh(group, new THREE.TorusGeometry(0.7 * scale, 0.035 * scale, 6, 40), accent, [0, 0.035, 0], [Math.PI / 2, 0, 0]);
@@ -399,14 +449,18 @@ function makeScene(objects, walls = [], openings = [], subjectId) {
   scene.background = new THREE.Color(palette.night);
   scene.fog = new THREE.Fog(palette.night, bounds.size * 0.65, bounds.size * 2.5);
 
-  scene.add(new THREE.HemisphereLight("#b9d7e5", "#071018", 2.25));
-  const key = new THREE.SpotLight("#ffd9ae", 1050, 75, 0.65, 0.45, 1.25);
+  scene.add(new THREE.HemisphereLight("#c8e5f0", "#071018", 1.7));
+  scene.add(new THREE.AmbientLight("#d6edf5", 0.35));
+  const key = new THREE.SpotLight("#ffe1bd", 1180, 75, 0.62, 0.42, 1.18);
   key.position.copy(bounds.center).add(new THREE.Vector3(-10, 24, 12));
   key.target.position.copy(bounds.center);
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
   scene.add(key, key.target);
-  const rim = new THREE.DirectionalLight("#5ca8d8", 2.0);
+  const fill = new THREE.DirectionalLight("#b8d8e6", 1.1);
+  fill.position.copy(bounds.center).add(new THREE.Vector3(-16, 9, -14));
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight("#5ca8d8", 1.7);
   rim.position.copy(bounds.center).add(new THREE.Vector3(14, 10, -20));
   scene.add(rim);
   const practical = new THREE.PointLight("#d88751", 28, 22, 2);
