@@ -76,14 +76,30 @@ const framingPresets = [
   { id: "overhead", label: "Overhead", controls: { orbit: 0, raise: 10, dolly: 35, focus: 0.18 } },
 ];
 
-const defaultControls = (shot) => ({
-  orbit: 0,
-  raise: 0,
-  dolly: 0,
-  focal: clamp(Number(shot?.cam?.focal) || 35, 18, 135),
-  focus: 0.84,
-  aspect: shot?.cam?.previsAspect || "2.39",
-  motionProgress: 0,
+const defaultControls = (shot) => {
+  const savedView = shot?.cam?.previsView || {};
+  return {
+    orbit: clamp(Number(savedView.orbit) || 0, -155, 155),
+    raise: clamp(Number(savedView.raise) || 0, -4, 11),
+    dolly: clamp(Number(savedView.dolly) || 0, -60, 80),
+    focal: clamp(Number(savedView.focal ?? shot?.cam?.focal) || 35, 18, 135),
+    focus: clamp(Number(savedView.focus) || 0.84, 0.15, 0.9),
+    aspect: shot?.cam?.previsAspect || "2.39",
+    motionProgress: 0,
+  };
+};
+
+const cameraFieldsForControls = (controls, preset) => ({
+  focal: +Number(controls.focal).toFixed(1),
+  previsAspect: controls.aspect,
+  previsPreset: preset,
+  previsView: {
+    orbit: +Number(controls.orbit).toFixed(2),
+    raise: +Number(controls.raise).toFixed(2),
+    dolly: +Number(controls.dolly).toFixed(2),
+    focal: +Number(controls.focal).toFixed(1),
+    focus: +Number(controls.focus).toFixed(3),
+  },
 });
 
 const previewFrame = (width, height, aspectId) => {
@@ -515,37 +531,36 @@ function shotCamera(shot, subject, controls, timelineDuration = 0) {
   const subjectHeight = Math.max(4, Number(subject?.height) || 5.9);
   const camera = cameraAtMotionProgress(shot.cam, controls.motionProgress, timelineDuration);
   const focus = typeof controls.focus === "number" ? controls.focus : 0.84;
+  const cameraHeight = Math.max(0.35, Number(camera?.height) || Number(shot.cam?.height) || 5.2);
+  const cameraPosition = new THREE.Vector3(Number(camera?.x) || 0, cameraHeight, Number(camera?.y) || 0);
   const subjectTarget = subject
     ? vec(subject, clamp(subjectHeight * focus, 0.6, subjectHeight - 0.25))
     : new THREE.Vector3(0, 2.7, 0);
-  const hasMotionPath = motionMarksForCamera(shot.cam).length > 1;
   const trackToSubject = Boolean(shot.cam?.aim && shot.cam?.linkTo && subject);
   const heading = (Number(camera?.rot) || 0) * RAD;
   const manualTarget = new THREE.Vector3(
-    Number(camera?.x || 0) + Math.sin(heading) * 10,
-    controls.focus === "environment" ? 1.9 : 1.42,
-    Number(camera?.y || 0) - Math.cos(heading) * 10
+    cameraPosition.x + Math.sin(heading) * 10,
+    // Keep the plan’s heading as the horizontal eyeline, while using the
+    // chosen subject only for a natural vertical point of interest. This
+    // preserves manual camera direction without starting every preview on a
+    // flat, horizon-only line that pushes the performer out of frame.
+    subject ? subjectTarget.y : cameraHeight + (focus - 0.84) * 5,
+    cameraPosition.z - Math.cos(heading) * 10
   );
-  const target = hasMotionPath && !trackToSubject ? manualTarget : subjectTarget;
-  const plannedRadius = Math.hypot((Number(camera?.x) || 0) - target.x, (Number(camera?.y) || 0) - target.z);
-  const desiredFrameHeight = frameHeightForShot(shot.description);
-  const neutralRadius = clamp(
-    (desiredFrameHeight / (2 * Math.tan((fov * RAD) / 2))) * 1.12,
-    3.8,
-    32
-  );
-  const baseRadius = plannedRadius
-    ? clamp(plannedRadius, neutralRadius * 0.9, neutralRadius * 1.35)
-    : neutralRadius;
+  // The 2D plan is the source of truth. A camera only tracks a performer when
+  // Track To is explicitly enabled; otherwise its rot heading becomes the 3D eyeline.
+  const target = trackToSubject ? subjectTarget : manualTarget;
+  const plannedRadius = Math.hypot(cameraPosition.x - target.x, cameraPosition.z - target.z);
+  const baseRadius = plannedRadius || 10;
   const radius = Math.max(2.5, baseRadius * (1 + (Number(controls.dolly) || 0) / 100));
-  const baseDirection = new THREE.Vector3((Number(camera?.x) || 0) - target.x, 0, (Number(camera?.y) || 0) - target.z);
+  const baseDirection = new THREE.Vector3(cameraPosition.x - target.x, 0, cameraPosition.z - target.z);
   if (baseDirection.lengthSq() < 0.01) {
     baseDirection.set(Math.sin(heading || Math.PI), 0, Math.cos(heading || Math.PI));
   }
   const angle = Math.atan2(baseDirection.x, baseDirection.z) + (Number(controls.orbit) || 0) * RAD;
   const position = new THREE.Vector3(
     target.x + Math.sin(angle) * radius,
-    Math.max(0.35, target.y + (Number(controls.raise) || 0)),
+    Math.max(0.35, cameraHeight + (Number(controls.raise) || 0)),
     target.z + Math.cos(angle) * radius
   );
   return { fov: clamp(fov, 12, 95), position, target, focal, distance: position.distanceTo(target) };
@@ -917,7 +932,15 @@ export function renderPrevisFrame({ shot, objects, walls = [], openings = [], wi
   }
 }
 
-export default function PrevisWindow({ shot, objects, walls = [], openings = [], onUpdateCamera, onClose }) {
+export default function PrevisWindow({
+  shot,
+  objects,
+  walls = [],
+  openings = [],
+  onBeginCameraUpdate,
+  onUpdateCamera,
+  onClose,
+}) {
   const stageRef = useRef(null);
   const canvasRef = useRef(null);
   const runtimeRef = useRef(null);
@@ -927,8 +950,9 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
   const [controls, setControls] = useState(() => defaultControls(shot));
   const [frameBox, setFrameBox] = useState(null);
   const [fallback, setFallback] = useState(false);
-  const [activePreset, setActivePreset] = useState("shot");
+  const [activePreset, setActivePreset] = useState(() => shot?.cam?.previsPreset || "shot");
   const [motionPlaying, setMotionPlaying] = useState(false);
+  const persistTransactionRef = useRef(false);
   const subject = useMemo(() => subjectForShot(shot, objects), [shot, objects]);
   const actorCount = objects.filter((object) => object.type === "actor").length;
   const propCount = objects.filter((object) => object.type === "prop").length;
@@ -952,7 +976,7 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
     const next = defaultControls(shot);
     controlsRef.current = next;
     setControls(next);
-    setActivePreset("shot");
+    setActivePreset(shot?.cam?.previsPreset || "shot");
     setMotionPlaying(false);
   }, [shot?.cam?.id]);
 
@@ -1067,8 +1091,14 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
         renderer.setScissorTest(false);
         renderer.setClearColor("#02060a", 1);
         renderer.clear();
-        renderer.setViewport(0, 0, width, height);
-        camera.aspect = width / height;
+        const frame = previewFrame(width, height, controlsRef.current.aspect);
+        // Render into the actual selected cinema frame, not the surrounding
+        // workspace canvas. The guide, live viewport, and exported image now
+        // share one aspect calculation.
+        renderer.setScissorTest(true);
+        renderer.setViewport(frame.x, frame.y, frame.width, frame.height);
+        renderer.setScissor(frame.x, frame.y, frame.width, frame.height);
+        camera.aspect = frame.aspect;
         const motionObjects = animatePerformersAtProgress(objects, controlsRef.current.motionProgress, choreographyDuration);
         sceneState.actorMeshes.forEach((actorMesh, actorId) => {
           const actor = motionObjects.find((object) => object.id === actorId);
@@ -1101,15 +1131,35 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
     };
   }, [choreographyDuration, fallback, objects, walls, openings, shot, subject]);
 
+  const beginCameraUpdate = () => {
+    if (persistTransactionRef.current || !shot?.cam?.id) return;
+    persistTransactionRef.current = true;
+    onBeginCameraUpdate?.(shot.cam.id);
+  };
+
+  const finishCameraUpdate = () => {
+    persistTransactionRef.current = false;
+  };
+
+  const updateControls = (fields, preset = "custom") => {
+    const next = { ...controlsRef.current, ...fields };
+    controlsRef.current = next;
+    setActivePreset(preset);
+    setControls(next);
+    if (shot?.cam?.id) onUpdateCamera?.(shot.cam.id, cameraFieldsForControls(next, preset), false);
+  };
+
   const applyPreset = (preset) => {
     setMotionPlaying(false);
-    setActivePreset(preset.id);
-    setControls((current) => ({ ...current, ...preset.controls }));
+    beginCameraUpdate();
+    updateControls(preset.controls, preset.id);
+    finishCameraUpdate();
   };
 
   const chooseAspect = (format) => {
-    setControls((current) => ({ ...current, aspect: format.id }));
-    onUpdateCamera?.(shot.cam.id, { previsAspect: format.id });
+    beginCameraUpdate();
+    updateControls({ aspect: format.id }, activePreset);
+    finishCameraUpdate();
   };
 
   const toggleMotionPlayback = () => {
@@ -1134,15 +1184,16 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
     const dx = event.clientX - dragRef.current.x;
     const dy = event.clientY - dragRef.current.y;
     dragRef.current = { x: event.clientX, y: event.clientY };
-    setActivePreset("custom");
-    setControls((current) => ({
-      ...current,
-      orbit: clamp(current.orbit - dx * 0.32, -155, 155),
-      raise: clamp(current.raise + dy * 0.025, -4, 11),
-    }));
+    if (!dx && !dy) return;
+    beginCameraUpdate();
+    updateControls({
+      orbit: clamp(controlsRef.current.orbit - dx * 0.32, -155, 155),
+      raise: clamp(controlsRef.current.raise + dy * 0.025, -4, 11),
+    });
   };
   const onPointerUp = () => {
     dragRef.current = null;
+    finishCameraUpdate();
   };
 
   const activeAspect = aspectRatioFor(controls.aspect);
@@ -1315,7 +1366,7 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
                 ))}
               </div>
               <p className="mt-2 text-xs leading-relaxed" style={{ color: palette.dim }}>
-                The selected format is saved to this camera and carries into exported previs frames.
+                Every adjustment is saved to this camera and carries into reopened and exported previs frames.
               </p>
             </section>
 
@@ -1328,10 +1379,12 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
                   min="18"
                   max="135"
                   value={controls.focal}
-                  onChange={(event) => {
-                    setActivePreset("custom");
-                    setControls((current) => ({ ...current, focal: +event.target.value }));
-                  }}
+                  onPointerDown={beginCameraUpdate}
+                  onKeyDown={beginCameraUpdate}
+                  onPointerUp={finishCameraUpdate}
+                  onKeyUp={finishCameraUpdate}
+                  onBlur={finishCameraUpdate}
+                  onChange={(event) => updateControls({ focal: +event.target.value })}
                   className="mt-2 w-full"
                 />
               </label>
@@ -1343,10 +1396,12 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
                   min="-155"
                   max="155"
                   value={controls.orbit}
-                  onChange={(event) => {
-                    setActivePreset("custom");
-                    setControls((current) => ({ ...current, orbit: +event.target.value }));
-                  }}
+                  onPointerDown={beginCameraUpdate}
+                  onKeyDown={beginCameraUpdate}
+                  onPointerUp={finishCameraUpdate}
+                  onKeyUp={finishCameraUpdate}
+                  onBlur={finishCameraUpdate}
+                  onChange={(event) => updateControls({ orbit: +event.target.value })}
                   className="mt-2 w-full"
                 />
               </label>
@@ -1359,10 +1414,12 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
                   max="11"
                   step="0.1"
                   value={controls.raise}
-                  onChange={(event) => {
-                    setActivePreset("custom");
-                    setControls((current) => ({ ...current, raise: +event.target.value }));
-                  }}
+                  onPointerDown={beginCameraUpdate}
+                  onKeyDown={beginCameraUpdate}
+                  onPointerUp={finishCameraUpdate}
+                  onKeyUp={finishCameraUpdate}
+                  onBlur={finishCameraUpdate}
+                  onChange={(event) => updateControls({ raise: +event.target.value })}
                   className="mt-2 w-full"
                 />
               </label>
@@ -1374,10 +1431,12 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
                   min="-60"
                   max="80"
                   value={controls.dolly}
-                  onChange={(event) => {
-                    setActivePreset("custom");
-                    setControls((current) => ({ ...current, dolly: +event.target.value }));
-                  }}
+                  onPointerDown={beginCameraUpdate}
+                  onKeyDown={beginCameraUpdate}
+                  onPointerUp={finishCameraUpdate}
+                  onKeyUp={finishCameraUpdate}
+                  onBlur={finishCameraUpdate}
+                  onChange={(event) => updateControls({ dolly: +event.target.value })}
                   className="mt-2 w-full"
                 />
               </label>
@@ -1390,10 +1449,12 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
                   max="0.9"
                   step="0.01"
                   value={controls.focus}
-                  onChange={(event) => {
-                    setActivePreset("custom");
-                    setControls((current) => ({ ...current, focus: +event.target.value }));
-                  }}
+                  onPointerDown={beginCameraUpdate}
+                  onKeyDown={beginCameraUpdate}
+                  onPointerUp={finishCameraUpdate}
+                  onKeyUp={finishCameraUpdate}
+                  onBlur={finishCameraUpdate}
+                  onChange={(event) => updateControls({ focus: +event.target.value })}
                   className="mt-2 w-full"
                 />
               </label>
@@ -1407,6 +1468,9 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
             >
               Reset to shot camera
             </button>
+            <p className="mt-2 text-center text-[11px]" style={{ color: palette.cyan }} data-testid="status-previs-camera-save">
+              Saved to Camera {shot.camLetter || shot.cam?.name || ""}
+            </p>
 
             <section className="mt-4 rounded-md p-3 text-xs" style={{ background: palette.night, color: palette.dim, border: `1px solid ${palette.rule}` }}>
               <p className="font-semibold" style={{ color: palette.text }}>Scene intelligence</p>

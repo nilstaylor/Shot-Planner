@@ -1686,7 +1686,14 @@ export default function BlockingBoard() {
 
   const addCamera = () => {
     const c = centerOfView();
-    const o = newCamera(c.x, c.y - 8, String.fromCharCode(65 + cameras.length), { layerContext: layerMode });
+    // Start a 35mm Super 35 camera at a workable medium-shot distance. Users
+    // can still place or move it anywhere afterward.
+    const o = newCamera(c.x, c.y - 9, String.fromCharCode(65 + cameras.length), { layerContext: layerMode });
+    const nearestActor = actors.reduce(
+      (nearest, actor) => (!nearest || dist(o, actor) < dist(o, nearest) ? actor : nearest),
+      null
+    );
+    if (nearestActor) o.rot = Math.round(headingOf(nearestActor.x - o.x, nearestActor.y - o.y));
     o.aim = false;
     recordUndo("add");
     setObjects((p) => [...p, o]);
@@ -4510,7 +4517,13 @@ ${previs}
           objects={objects}
           walls={walls}
           openings={openings}
-          onUpdateCamera={(cameraId, fields) => patch(cameraId, fields)}
+          onBeginCameraUpdate={(cameraId) => recordUndo(`previs-camera:${cameraId}`)}
+          onUpdateCamera={(cameraId, fields, record = false) => {
+            patch(cameraId, fields, record);
+            setPreviewShot((current) =>
+              current?.cam?.id === cameraId ? { ...current, cam: { ...current.cam, ...fields } } : current
+            );
+          }}
           onClose={() => setPreviewShot(null)}
         />
       )}
