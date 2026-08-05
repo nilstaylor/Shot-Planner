@@ -2,54 +2,112 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { appearanceForActor, aspectRatioFor, PREVIS_ASPECT_RATIOS } from "./previsCast";
+import { motionPathDuration, sampleMotionPath } from "./motionPath";
 
 const RAD = Math.PI / 180;
 
 const palette = {
-  ink: "#111820",
-  panel: "#18232e",
-  rule: "#2f4252",
-  text: "#d6e1e8",
-  dim: "#91a2af",
-  amber: "#e8a33d",
-  teal: "#4fd1c5",
-  male: "#34526d",
-  female: "#75465d",
-  skin: "#c98762",
-  prop: "#718699",
+  night: "#08111b",
+  midnight: "#0d1a26",
+  panel: "#122332",
+  panelHi: "#183145",
+  rule: "#29475c",
+  text: "#e5eef3",
+  dim: "#93a8b7",
+  amber: "#f1af4c",
+  cyan: "#68d8db",
+  blue: "#476f91",
+  burgundy: "#84506d",
+  skin: "#d89a73",
+  hair: "#202934",
+  floor: "#243440",
+  prop: "#7d96a7",
+  wood: "#725944",
+  sofa: "#456a74",
 };
 
-const vec = (o, height = 0) => new THREE.Vector3(o.x, height, o.y);
+const vec = (object, height = 0) => new THREE.Vector3(Number(object.x) || 0, height, Number(object.y) || 0);
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const toFixed = (value, digits = 1) => Number(value || 0).toFixed(digits);
+const motionMarksForCamera = (camera) => (Array.isArray(camera?.motionPath) ? camera.motionPath : []);
+const localMotionProgress = (object, globalProgress = 0, timelineDuration = 0) => {
+  const duration = motionPathDuration(motionMarksForCamera(object));
+  if (!timelineDuration || !duration) return globalProgress;
+  return clamp((globalProgress * timelineDuration) / duration, 0, 1);
+};
+const cameraAtMotionProgress = (camera, progress = 0, timelineDuration = 0) => {
+  const marks = motionMarksForCamera(camera);
+  if (marks.length < 2) return camera;
+  const pose = sampleMotionPath(marks, localMotionProgress(camera, progress, timelineDuration));
+  return pose ? { ...camera, ...pose } : camera;
+};
+const animatePerformersAtProgress = (objects, progress = 0, timelineDuration = 0) =>
+  objects.map((object) => {
+    if (object.type !== "actor") return object;
+    const marks = motionMarksForCamera(object);
+    if (marks.length < 2) return object;
+    const pose = sampleMotionPath(marks, localMotionProgress(object, progress, timelineDuration));
+    return pose ? { ...object, ...pose } : object;
+  });
 const subjectForShot = (shot, objects) =>
-  shot.subject || objects.find((o) => o.id === shot.cam.linkTo) || objects.find((o) => o.type === "actor") || null;
+  objects.find((object) => object.id === shot.cam?.linkTo || object.id === shot.subject?.id) ||
+  shot.subject ||
+  objects.find((object) => object.type === "actor") ||
+  null;
 const wallLength = (wall) => Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y);
 const wallPoint = (wall, t) => ({
   x: wall.a.x + (wall.b.x - wall.a.x) * t,
   y: wall.a.y + (wall.b.y - wall.a.y) * t,
 });
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-const wallSlices = (wall, openings) => {
-  const length = Math.max(wallLength(wall), 0.01);
-  const gaps = openings
-    .filter((opening) => opening.wallId === wall.id)
-    .map((opening) => {
-      const half = (Number(opening.width) || 0) / (2 * length);
-      return { start: clamp(opening.t - half, 0, 1), end: clamp(opening.t + half, 0, 1) };
-    })
-    .sort((a, b) => a.start - b.start);
-  const result = [];
-  let cursor = 0;
-  gaps.forEach((gap) => {
-    if (gap.start > cursor + 0.002) result.push({ start: cursor, end: gap.start });
-    cursor = Math.max(cursor, gap.end);
-  });
-  if (cursor < 0.998) result.push({ start: cursor, end: 1 });
-  return result;
+const sensorHeights = {
+  "Super 35": 14,
+  "Full Frame": 20.25,
+  "Micro 4/3": 9.73,
+  "Super 16": 7.41,
 };
 
-function addMesh(group, geometry, material, position = [0, 0, 0], rotation = [0, 0, 0]) {
-  const mesh = new THREE.Mesh(geometry, material);
+const framingPresets = [
+  { id: "shot", label: "Shot camera", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.57 } },
+  { id: "low", label: "Low angle", controls: { orbit: 0, raise: -2.7, dolly: -12, focus: 0.68 } },
+  { id: "eye", label: "Eye line", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.58 } },
+  { id: "high", label: "High angle", controls: { orbit: 0, raise: 4.8, dolly: 10, focus: 0.43 } },
+  { id: "overhead", label: "Overhead", controls: { orbit: 0, raise: 10, dolly: 35, focus: 0.18 } },
+];
+
+const defaultControls = (shot) => ({
+  orbit: 0,
+  raise: 0,
+  dolly: 0,
+  focal: clamp(Number(shot?.cam?.focal) || 35, 18, 135),
+  focus: 0.57,
+  aspect: shot?.cam?.previsAspect || "2.39",
+  motionProgress: 0,
+});
+
+const previewFrame = (width, height, aspectId) => {
+  const aspect = aspectRatioFor(aspectId).value;
+  if (width / height > aspect) {
+    const frameWidth = Math.round(height * aspect);
+    return { x: Math.round((width - frameWidth) / 2), y: 0, width: frameWidth, height, aspect };
+  }
+  const frameHeight = Math.round(width / aspect);
+  return { x: 0, y: Math.round((height - frameHeight) / 2), width, height: frameHeight, aspect };
+};
+
+function material(color, options = {}) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: options.roughness ?? 0.72,
+    metalness: options.metalness ?? 0,
+    transparent: !!options.transparent,
+    opacity: options.opacity ?? 1,
+  });
+}
+
+function addMesh(group, geometry, meshMaterial, position = [0, 0, 0], rotation = [0, 0, 0]) {
+  const mesh = new THREE.Mesh(geometry, meshMaterial);
   mesh.position.set(...position);
   mesh.rotation.set(...rotation);
   mesh.castShadow = true;
@@ -58,96 +116,191 @@ function addMesh(group, geometry, material, position = [0, 0, 0], rotation = [0,
   return mesh;
 }
 
-function makeActor(actor) {
+function addCylinderBetween(group, start, end, radius, meshMaterial, radialSegments = 10) {
+  const direction = end.clone().sub(start);
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, direction.length(), radialSegments), meshMaterial);
+  mesh.position.copy(start.clone().add(end).multiplyScalar(0.5));
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
+function makeActor(actor, isSubject = false) {
   const group = new THREE.Group();
-  const height = Math.max(2.5, Number(actor.height) || 5.9);
-  const gender = actor.gender || "female";
-  const clothing = new THREE.MeshStandardMaterial({
-    color: gender === "male" ? palette.male : palette.female,
-    roughness: 0.78,
-  });
-  const skin = new THREE.MeshStandardMaterial({ color: palette.skin, roughness: 0.9 });
-  const dark = new THREE.MeshStandardMaterial({ color: "#1c2630", roughness: 0.86 });
+  const appearance = appearanceForActor(actor);
+  const height = Math.max(4.2, appearance.height);
   const scale = height / 5.9;
+  const silhouette = appearance.build === "broad" ? 1.16 : appearance.build === "lean" ? 0.88 : 1;
+  const garment = material(appearance.wardrobe.color, { roughness: 0.85 });
+  const garmentDark = material(appearance.wardrobe.accent, { roughness: 0.86 });
+  const skin = material(appearance.skin.color, { roughness: 0.94 });
+  const hair = material(appearance.hairColor.color, { roughness: 0.96 });
+  const shoe = material("#151d25", { roughness: 0.92 });
+  const accent = material(palette.amber, { roughness: 0.45, metalness: 0.1 });
 
-  if (gender === "female") {
-    addMesh(group, new THREE.ConeGeometry(0.46 * scale, 1.45 * scale, 6), clothing, [0, 1.62 * scale, 0]);
-    addMesh(group, new THREE.CylinderGeometry(0.27 * scale, 0.31 * scale, 0.95 * scale, 8), clothing, [0, 2.72 * scale, 0]);
-  } else {
-    addMesh(group, new THREE.CylinderGeometry(0.38 * scale, 0.47 * scale, 1.48 * scale, 8), clothing, [0, 1.74 * scale, 0]);
-    addMesh(group, new THREE.CylinderGeometry(0.32 * scale, 0.35 * scale, 0.75 * scale, 8), clothing, [0, 2.78 * scale, 0]);
-  }
-
+  // A deliberately readable, anatomically proportioned previs figure.
+  addMesh(group, new THREE.SphereGeometry(0.14 * scale, 12, 8), shoe, [-0.16 * scale, 0.12 * scale, 0.05 * scale]);
+  addMesh(group, new THREE.SphereGeometry(0.14 * scale, 12, 8), shoe, [0.16 * scale, 0.12 * scale, 0.05 * scale]);
+  addCylinderBetween(
+    group,
+    new THREE.Vector3(-0.16 * scale, 0.18 * scale, 0),
+    new THREE.Vector3(-0.16 * scale, 2.35 * scale, 0),
+    0.12 * scale * silhouette,
+    garmentDark
+  );
+  addCylinderBetween(
+    group,
+    new THREE.Vector3(0.16 * scale, 0.18 * scale, 0),
+    new THREE.Vector3(0.16 * scale, 2.35 * scale, 0),
+    0.12 * scale * silhouette,
+    garmentDark
+  );
+  addMesh(group, new THREE.SphereGeometry(0.3 * scale * silhouette, 12, 8), garment, [0, 2.42 * scale, 0]);
+  addMesh(
+    group,
+    appearance.gender === "female"
+      ? new THREE.ConeGeometry(0.48 * scale * silhouette, 1.35 * scale, 7)
+      : new THREE.CylinderGeometry(0.42 * scale * silhouette, 0.49 * scale * silhouette, 1.55 * scale, 10),
+    garment,
+    [0, 3.16 * scale, 0]
+  );
+  addMesh(group, new THREE.CylinderGeometry(0.36 * scale * silhouette, 0.42 * scale * silhouette, 0.72 * scale, 10), garmentDark, [0, 4.1 * scale, 0]);
   for (const side of [-1, 1]) {
-    addMesh(
+    addCylinderBetween(
       group,
-      new THREE.CylinderGeometry(0.13 * scale, 0.14 * scale, 1.55 * scale, 7),
-      dark,
-      [side * 0.23 * scale, 0.77 * scale, 0]
+      new THREE.Vector3(side * 0.42 * scale * silhouette, 3.85 * scale, 0),
+      new THREE.Vector3(side * 0.66 * scale * silhouette, 2.62 * scale, -0.02 * scale),
+      0.115 * scale,
+      garmentDark
     );
-    addMesh(
+    addCylinderBetween(
       group,
-      new THREE.CylinderGeometry(0.1 * scale, 0.1 * scale, 1.35 * scale, 7),
-      skin,
-      [side * 0.68 * scale, 2.37 * scale, 0],
-      [0, 0, side * -0.25]
+      new THREE.Vector3(side * 0.66 * scale * silhouette, 2.62 * scale, -0.02 * scale),
+      new THREE.Vector3(side * 0.7 * scale * silhouette, 2.25 * scale, -0.07 * scale),
+      0.09 * scale,
+      skin
     );
   }
-
-  addMesh(group, new THREE.SphereGeometry(0.36 * scale, 16, 12), skin, [0, 3.46 * scale, 0]);
-  addMesh(group, new THREE.SphereGeometry(0.38 * scale, 16, 12), dark, [0, 3.61 * scale, 0.04 * scale]);
-  addMesh(group, new THREE.SphereGeometry(0.36 * scale, 16, 12), skin, [0, 3.48 * scale, -0.04 * scale]);
+  addMesh(group, new THREE.CylinderGeometry(0.11 * scale, 0.11 * scale, 0.18 * scale, 8), skin, [0, 4.48 * scale, 0]);
+  addMesh(group, new THREE.SphereGeometry(0.36 * scale, 18, 14), skin, [0, 4.78 * scale, 0]);
+  const headY = 4.89 * scale;
+  if (appearance.hairStyle === "long" || appearance.hairStyle === "braids") {
+    addMesh(group, new THREE.SphereGeometry(0.39 * scale, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, [0, headY, 0.06 * scale]);
+    if (appearance.hairStyle === "long") {
+      addMesh(group, new THREE.CapsuleGeometry(0.18 * scale, 0.74 * scale, 6, 12), hair, [0, 4.38 * scale, 0.13 * scale]);
+    } else {
+      for (const side of [-1, 1]) {
+        addCylinderBetween(group, new THREE.Vector3(side * 0.22 * scale, 4.69 * scale, 0.1 * scale), new THREE.Vector3(side * 0.28 * scale, 3.87 * scale, 0.12 * scale), 0.047 * scale, hair, 7);
+      }
+    }
+  } else if (appearance.hairStyle === "bun") {
+    addMesh(group, new THREE.SphereGeometry(0.375 * scale, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.48), hair, [0, headY, 0.035 * scale]);
+    addMesh(group, new THREE.SphereGeometry(0.15 * scale, 12, 10), hair, [0, 5.05 * scale, 0.19 * scale]);
+  } else if (appearance.hairStyle === "curly") {
+    [[-0.2, 0.04], [0, 0.12], [0.2, 0.04], [-0.12, -0.15], [0.12, -0.15]].forEach(([x, z]) => {
+      addMesh(group, new THREE.SphereGeometry(0.18 * scale, 10, 8), hair, [x * scale, headY + 0.05 * scale, z * scale]);
+    });
+  } else if (appearance.hairStyle === "wave") {
+    addMesh(group, new THREE.SphereGeometry(0.38 * scale, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, [0, headY, 0.035 * scale]);
+    addMesh(group, new THREE.SphereGeometry(0.17 * scale, 10, 8), hair, [0.25 * scale, 4.73 * scale, -0.08 * scale]);
+  } else {
+    const capHeight = appearance.hairStyle === "buzz" ? Math.PI * 0.34 : Math.PI * 0.48;
+    addMesh(group, new THREE.SphereGeometry(0.375 * scale, 18, 12, 0, Math.PI * 2, 0, capHeight), hair, [0, headY, 0.035 * scale]);
+  }
+  if (appearance.wardrobe.id === "formal") {
+    addMesh(group, new THREE.BoxGeometry(0.08 * scale, 0.62 * scale, 0.08 * scale), accent, [0, 3.72 * scale, -0.43 * scale]);
+  } else if (appearance.wardrobe.id === "outerwear") {
+    addMesh(group, new THREE.BoxGeometry(0.68 * scale * silhouette, 0.12 * scale, 0.52 * scale), garmentDark, [0, 3.9 * scale, 0]);
+  } else if (appearance.wardrobe.id === "workwear") {
+    addMesh(group, new THREE.BoxGeometry(0.32 * scale, 0.36 * scale, 0.045 * scale), garmentDark, [0.22 * scale * silhouette, 3.35 * scale, -0.43 * scale]);
+  }
+  if (isSubject) {
+    addMesh(group, new THREE.TorusGeometry(0.7 * scale, 0.035 * scale, 6, 40), accent, [0, 0.035, 0], [Math.PI / 2, 0, 0]);
+  }
 
   group.position.copy(vec(actor));
-  group.rotation.y = -actor.rot * RAD;
-  group.userData.name = actor.name;
+  group.rotation.y = -(Number(actor.rot) || 0) * RAD;
+  group.userData = { kind: "actor", label: actor.name || appearance.profile.label || "Performer" };
   return group;
 }
 
 function makeProp(prop) {
   const group = new THREE.Group();
-  const name = (prop.name || "").toLowerCase();
-  const w = Math.max(0.5, Number(prop.w) || 3);
-  const d = Math.max(0.5, Number(prop.d) || 3);
-  const base = new THREE.MeshStandardMaterial({ color: palette.prop, roughness: 0.82 });
-  const dark = new THREE.MeshStandardMaterial({ color: "#354651", roughness: 0.9 });
-  const cushion = new THREE.MeshStandardMaterial({ color: "#536e80", roughness: 0.95 });
+  const name = (prop.name || "set object").toLowerCase();
+  const width = Math.max(0.6, Number(prop.w) || 3);
+  const depth = Math.max(0.6, Number(prop.d) || 3);
+  const base = material(palette.prop, { roughness: 0.7 });
+  const dark = material("#324753", { roughness: 0.8 });
+  const wood = material(palette.wood, { roughness: 0.84 });
+  const upholstery = material(palette.sofa, { roughness: 0.95 });
+  const lamp = material("#f6d59a", { roughness: 0.35, metalness: 0.15 });
 
   if (name.includes("round") || name.includes("circle")) {
-    addMesh(group, new THREE.CylinderGeometry(Math.max(w, d) / 2, Math.max(w, d) / 2, 0.16, 24), base, [0, 2.25, 0]);
-    addMesh(group, new THREE.CylinderGeometry(0.14, 0.19, 2.25, 10), dark, [0, 1.12, 0]);
-  } else if (name.includes("table")) {
-    addMesh(group, new THREE.BoxGeometry(w, 0.16, d), base, [0, 2.25, 0]);
+    addMesh(group, new THREE.CylinderGeometry(Math.max(width, depth) / 2, Math.max(width, depth) / 2, 0.16, 32), wood, [0, 2.3, 0]);
+    addMesh(group, new THREE.CylinderGeometry(0.13, 0.2, 2.28, 12), dark, [0, 1.14, 0]);
+  } else if (name.includes("table") || name.includes("desk")) {
+    addMesh(group, new THREE.BoxGeometry(width, 0.16, depth), wood, [0, 2.28, 0]);
     for (const x of [-1, 1]) {
       for (const z of [-1, 1]) {
-        addMesh(group, new THREE.BoxGeometry(0.18, 2.25, 0.18), dark, [x * (w / 2 - 0.25), 1.12, z * (d / 2 - 0.25)]);
+        addMesh(group, new THREE.BoxGeometry(0.15, 2.28, 0.15), dark, [x * (width / 2 - 0.18), 1.14, z * (depth / 2 - 0.18)]);
       }
     }
   } else if (name.includes("sofa") || name.includes("couch")) {
-    addMesh(group, new THREE.BoxGeometry(w, 0.75, d), cushion, [0, 0.8, 0]);
-    addMesh(group, new THREE.BoxGeometry(w, 1.0, 0.28), base, [0, 1.45, d / 2 - 0.14]);
-    addMesh(group, new THREE.BoxGeometry(0.28, 0.9, d), base, [-w / 2 + 0.14, 1.2, 0]);
-    addMesh(group, new THREE.BoxGeometry(0.28, 0.9, d), base, [w / 2 - 0.14, 1.2, 0]);
+    addMesh(group, new THREE.BoxGeometry(width, 0.7, depth), upholstery, [0, 0.82, 0]);
+    addMesh(group, new THREE.BoxGeometry(width, 1.08, 0.25), dark, [0, 1.52, depth / 2 - 0.13]);
+    addMesh(group, new THREE.BoxGeometry(0.26, 0.88, depth), dark, [-width / 2 + 0.13, 1.2, 0]);
+    addMesh(group, new THREE.BoxGeometry(0.26, 0.88, depth), dark, [width / 2 - 0.13, 1.2, 0]);
   } else if (name.includes("chair")) {
-    addMesh(group, new THREE.BoxGeometry(w, 0.2, d), cushion, [0, 1.1, 0]);
-    addMesh(group, new THREE.BoxGeometry(w, 1.05, 0.18), base, [0, 1.6, d / 2 - 0.09]);
+    addMesh(group, new THREE.BoxGeometry(width, 0.18, depth), upholstery, [0, 1.1, 0]);
+    addMesh(group, new THREE.BoxGeometry(width, 1.15, 0.16), dark, [0, 1.66, depth / 2 - 0.08]);
     for (const x of [-1, 1]) {
       for (const z of [-1, 1]) {
-        addMesh(group, new THREE.BoxGeometry(0.13, 1.1, 0.13), dark, [x * (w / 2 - 0.15), 0.55, z * (d / 2 - 0.15)]);
+        addMesh(group, new THREE.BoxGeometry(0.11, 1.1, 0.11), dark, [x * (width / 2 - 0.13), 0.55, z * (depth / 2 - 0.13)]);
       }
     }
   } else if (name.includes("bed")) {
-    addMesh(group, new THREE.BoxGeometry(w, 0.55, d), cushion, [0, 0.55, 0]);
-    addMesh(group, new THREE.BoxGeometry(w, 1.75, 0.24), base, [0, 1.0, d / 2 - 0.12]);
-    addMesh(group, new THREE.BoxGeometry(w * 0.42, 0.22, d * 0.23), new THREE.MeshStandardMaterial({ color: "#e8e2d4", roughness: 1 }), [0, 0.94, -d * 0.23]);
+    addMesh(group, new THREE.BoxGeometry(width, 0.5, depth), upholstery, [0, 0.55, 0]);
+    addMesh(group, new THREE.BoxGeometry(width, 1.65, 0.22), dark, [0, 1.0, depth / 2 - 0.11]);
+    addMesh(group, new THREE.BoxGeometry(width * 0.45, 0.18, depth * 0.22), material("#d9e0dd"), [0, 0.9, -depth * 0.24]);
+  } else if (name.includes("light") || name.includes("led") || name.includes("diffusion")) {
+    addMesh(group, new THREE.CylinderGeometry(0.07, 0.11, 4.2, 10), dark, [0, 2.1, 0]);
+    addMesh(group, new THREE.CylinderGeometry(0.62, 0.62, 0.08, 24), dark, [0, 0.04, 0]);
+    addMesh(group, new THREE.BoxGeometry(Math.max(1.4, width), Math.max(0.7, depth * 0.35), 0.16), lamp, [0, 4.15, 0], [0, 0.35, 0]);
+  } else if (name.includes("camera") || name.includes("dolly")) {
+    addMesh(group, new THREE.CylinderGeometry(0.24, 0.3, 3.4, 12), dark, [0, 1.7, 0]);
+    addMesh(group, new THREE.BoxGeometry(0.9, 0.5, 0.55), base, [0, 3.55, 0]);
+    addMesh(group, new THREE.CylinderGeometry(0.22, 0.22, 0.52, 16), dark, [0, 3.55, -0.45], [Math.PI / 2, 0, 0]);
   } else {
-    addMesh(group, new THREE.BoxGeometry(w, Math.min(Math.max(d * 0.45, 0.5), 3), d), base, [0, Math.min(Math.max(d * 0.45, 0.5), 3) / 2, 0]);
+    const height = clamp(depth * 0.5, 0.6, 3);
+    addMesh(group, new THREE.BoxGeometry(width, height, depth), base, [0, height / 2, 0]);
+    addMesh(group, new THREE.BoxGeometry(width * 0.9, 0.06, depth * 0.9), dark, [0, height + 0.035, 0]);
   }
 
   group.position.copy(vec(prop));
-  group.rotation.y = -prop.rot * RAD;
-  group.userData.name = prop.name;
+  group.rotation.y = -(Number(prop.rot) || 0) * RAD;
+  group.userData = { kind: "prop", label: prop.name || "Set object", width, depth };
   return group;
+}
+
+function wallSlices(wall, openings) {
+  const length = Math.max(wallLength(wall), 0.01);
+  const gaps = openings
+    .filter((opening) => opening.wallId === wall.id)
+    .map((opening) => {
+      const half = (Number(opening.width) || 0) / (2 * length);
+      return { start: clamp(opening.t - half, 0, 1), end: clamp(opening.t + half, 0, 1) };
+    })
+    .sort((a, b) => a.start - b.start);
+  const segments = [];
+  let cursor = 0;
+  gaps.forEach((gap) => {
+    if (gap.start > cursor + 0.002) segments.push({ start: cursor, end: gap.start });
+    cursor = Math.max(cursor, gap.end);
+  });
+  if (cursor < 0.998) segments.push({ start: cursor, end: 1 });
+  return segments;
 }
 
 function makeWallSegment(wall, segment) {
@@ -155,165 +308,426 @@ function makeWallSegment(wall, segment) {
   const end = wallPoint(wall, segment.end);
   const length = Math.max(0.08, Math.hypot(end.x - start.x, end.y - start.y));
   const height = 8;
-  const material = new THREE.MeshStandardMaterial({
-    color: wall.style === "translucent" ? "#60717f" : "#c5cbd0",
-    roughness: 0.92,
-    transparent: wall.style === "translucent",
-    opacity: wall.style === "translucent" ? 0.46 : 1,
-  });
+  const translucent = wall.style === "translucent";
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(length, height, Math.max(0.12, Number(wall.thickness) || 0.32)),
-    material
+    material(translucent ? "#6b8291" : "#c8d0d1", { roughness: 0.93, transparent: translucent, opacity: translucent ? 0.48 : 1 })
   );
   mesh.position.set((start.x + end.x) / 2, height / 2, (start.y + end.y) / 2);
   mesh.rotation.y = -Math.atan2(end.y - start.y, end.x - start.x);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
+  mesh.userData = { kind: "wall", label: "Wall" };
   return mesh;
 }
 
-function makeScene(objects, walls = [], openings = []) {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(palette.ink);
-  scene.fog = new THREE.Fog(palette.ink, 25, 95);
+function makeOpeningFrame(opening, wall) {
+  const point = wallPoint(wall, opening.t);
+  const width = Math.max(1, Number(opening.width) || 3);
+  const group = new THREE.Group();
+  const frameMaterial = material("#3a4d59", { roughness: 0.75 });
+  addMesh(group, new THREE.BoxGeometry(0.1, 6.8, 0.2), frameMaterial, [-width / 2, 3.4, 0]);
+  addMesh(group, new THREE.BoxGeometry(0.1, 6.8, 0.2), frameMaterial, [width / 2, 3.4, 0]);
+  addMesh(group, new THREE.BoxGeometry(width + 0.15, 0.1, 0.2), frameMaterial, [0, 6.75, 0]);
+  group.position.copy(vec(point));
+  group.rotation.y = -Math.atan2(wall.b.y - wall.a.y, wall.b.x - wall.a.x);
+  return group;
+}
 
-  const hemisphere = new THREE.HemisphereLight("#c3d5df", "#151a1e", 2.4);
-  scene.add(hemisphere);
-  const key = new THREE.DirectionalLight("#ffe6c2", 3.4);
-  key.position.set(-14, 22, 10);
+function boundsForScene(objects, walls) {
+  const points = [
+    ...objects.map((object) => ({ x: Number(object.x) || 0, y: Number(object.y) || 0 })),
+    ...walls.flatMap((wall) => [wall.a, wall.b]),
+  ];
+  if (!points.length) return { center: new THREE.Vector3(0, 0, 0), size: 26 };
+  const minX = Math.min(...points.map((point) => point.x));
+  const maxX = Math.max(...points.map((point) => point.x));
+  const minZ = Math.min(...points.map((point) => point.y));
+  const maxZ = Math.max(...points.map((point) => point.y));
+  return {
+    center: new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2),
+    size: clamp(Math.max(maxX - minX, maxZ - minZ) + 18, 24, 92),
+  };
+}
+
+function makeScene(objects, walls = [], openings = [], subjectId) {
+  const scene = new THREE.Scene();
+  const bounds = boundsForScene(objects, walls);
+  scene.background = new THREE.Color(palette.night);
+  scene.fog = new THREE.Fog(palette.night, bounds.size * 0.65, bounds.size * 2.5);
+
+  scene.add(new THREE.HemisphereLight("#b9d7e5", "#071018", 2.25));
+  const key = new THREE.SpotLight("#ffd9ae", 1050, 75, 0.65, 0.45, 1.25);
+  key.position.copy(bounds.center).add(new THREE.Vector3(-10, 24, 12));
+  key.target.position.copy(bounds.center);
   key.castShadow = true;
-  scene.add(key);
-  const fill = new THREE.DirectionalLight("#4b93b7", 1.25);
-  fill.position.set(16, 10, -22);
-  scene.add(fill);
+  key.shadow.mapSize.set(1024, 1024);
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight("#5ca8d8", 2.0);
+  rim.position.copy(bounds.center).add(new THREE.Vector3(14, 10, -20));
+  scene.add(rim);
+  const practical = new THREE.PointLight("#d88751", 28, 22, 2);
+  practical.position.copy(bounds.center).add(new THREE.Vector3(0, 7, -4));
+  scene.add(practical);
 
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(100, 100),
-    new THREE.MeshStandardMaterial({ color: "#26323b", roughness: 1, metalness: 0 })
+    new THREE.PlaneGeometry(bounds.size, bounds.size),
+    material(palette.floor, { roughness: 0.94 })
   );
+  floor.position.copy(bounds.center);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const grid = new THREE.GridHelper(100, 100, "#4a5d6c", "#344653");
+  const grid = new THREE.GridHelper(bounds.size, Math.round(bounds.size), "#4a6574", "#2f4958");
+  grid.position.copy(bounds.center);
   grid.position.y = 0.01;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.48;
   scene.add(grid);
 
   walls.forEach((wall) => wallSlices(wall, openings).forEach((segment) => scene.add(makeWallSegment(wall, segment))));
-  objects.filter((o) => o.type === "prop").forEach((prop) => scene.add(makeProp(prop)));
-  objects.filter((o) => o.type === "actor").forEach((actor) => scene.add(makeActor(actor)));
-  return scene;
+  openings.forEach((opening) => {
+    const wall = walls.find((candidate) => candidate.id === opening.wallId);
+    if (wall) scene.add(makeOpeningFrame(opening, wall));
+  });
+  objects.filter((object) => object.type === "prop").forEach((prop) => scene.add(makeProp(prop)));
+  const actorMeshes = new Map();
+  objects.filter((object) => object.type === "actor").forEach((actor) => {
+    const actorMesh = makeActor(actor, actor.id === subjectId);
+    actorMeshes.set(actor.id, actorMesh);
+    scene.add(actorMesh);
+  });
+  return { scene, bounds, actorMeshes };
 }
 
-function shotCamera(shot, subject, controls) {
-  const sensor = { "Super 35": { h: 14 }, "Full Frame": { h: 20.25 }, "Micro 4/3": { h: 9.73 }, "Super 16": { h: 7.41 } }[
-    shot.cam.sensor
-  ] || { h: 14 };
-  const fov = THREE.MathUtils.radToDeg(2 * Math.atan(sensor.h / (2 * shot.cam.focal)));
-  const target = subject ? vec(subject, Math.max(2.2, (subject.height || 5.9) * 0.56)) : new THREE.Vector3(0, 2.5, 0);
-  const base = vec(shot.cam, Math.max(0.5, shot.cam.height || 5.4));
+function disposeScene(scene) {
+  scene.traverse((node) => {
+    if (node.geometry) node.geometry.dispose();
+    if (node.material) {
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach((item) => item.dispose());
+    }
+  });
+}
+
+function shotCamera(shot, subject, controls, timelineDuration = 0) {
+  const focal = clamp(Number(controls.focal) || Number(shot.cam.focal) || 35, 18, 135);
+  const sensorHeight = sensorHeights[shot.cam.sensor] || 14;
+  const fov = THREE.MathUtils.radToDeg(2 * Math.atan(sensorHeight / (2 * focal)));
+  const subjectHeight = Math.max(4, Number(subject?.height) || 5.9);
+  const camera = cameraAtMotionProgress(shot.cam, controls.motionProgress, timelineDuration);
+  const subjectTarget = subject
+    ? vec(subject, clamp(subjectHeight * (Number(controls.focus) || 0.57), 0.6, subjectHeight - 0.25))
+    : new THREE.Vector3(0, 2.7, 0);
+  const hasMotionPath = motionMarksForCamera(shot.cam).length > 1;
+  const trackToSubject = Boolean(shot.cam?.aim && shot.cam?.linkTo && subject);
+  const heading = (Number(camera?.rot) || 0) * RAD;
+  const manualTarget = new THREE.Vector3(
+    Number(camera?.x || 0) + Math.sin(heading) * 10,
+    controls.focus === "environment" ? 1.9 : 1.42,
+    Number(camera?.y || 0) - Math.cos(heading) * 10
+  );
+  const target = hasMotionPath && !trackToSubject ? manualTarget : subjectTarget;
+  const base = vec(camera, Math.max(0.5, Number(shot.cam.height) || 5.4));
   const baseDirection = base.clone().sub(target);
-  const radius = Math.max(3, Math.hypot(baseDirection.x, baseDirection.z)) * (1 + controls.dolly / 100);
-  const angle = Math.atan2(baseDirection.x, baseDirection.z) + controls.orbit * RAD;
-  const pos = new THREE.Vector3(
+  const radius = Math.max(3, Math.hypot(baseDirection.x, baseDirection.z)) * (1 + (Number(controls.dolly) || 0) / 100);
+  const angle = Math.atan2(baseDirection.x, baseDirection.z) + (Number(controls.orbit) || 0) * RAD;
+  const position = new THREE.Vector3(
     target.x + Math.sin(angle) * radius,
-    Math.max(0.4, base.y + controls.raise),
+    Math.max(0.35, base.y + (Number(controls.raise) || 0)),
     target.z + Math.cos(angle) * radius
   );
-  return { fov, position: pos, target };
+  return { fov: clamp(fov, 12, 95), position, target, focal, distance: position.distanceTo(target) };
 }
 
-function drawFallbackPrevis(canvas, shot, objects, walls = []) {
-  const rect = canvas.getBoundingClientRect();
-  const width = Math.max(320, Math.round(rect.width || canvas.width || 640));
-  const height = Math.max(180, Math.round(rect.height || canvas.height || 360));
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+function projectPoint(point, framing, width, height) {
+  const forward = framing.target.clone().sub(framing.position).normalize();
+  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+  const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+  const relative = point.clone().sub(framing.position);
+  const depth = relative.dot(forward);
+  if (depth < 0.15) return null;
+  const scale = height / (2 * Math.tan((framing.fov * RAD) / 2));
+  return {
+    x: width / 2 + (relative.dot(right) * scale) / depth,
+    y: height / 2 - (relative.dot(up) * scale) / depth,
+    depth,
+  };
+}
 
-  const isHigh = (shot.cam.height || 5.4) >= 7;
-  const isLow = (shot.cam.height || 5.4) <= 3.5;
-  const horizon = isHigh ? height * 0.33 : isLow ? height * 0.7 : height * 0.52;
-  const subject = subjectForShot(shot, objects);
-  ctx.fillStyle = palette.ink;
-  ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = "#26323b";
-  ctx.fillRect(0, horizon, width, height - horizon);
-  ctx.strokeStyle = "#405260";
-  ctx.lineWidth = 1;
-  for (let i = -7; i <= 7; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(width / 2, horizon);
-    ctx.lineTo(width / 2 + i * width * 0.14, height);
+function polygon(ctx, points, fill, stroke) {
+  if (points.some((point) => !point)) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  points.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+  ctx.closePath();
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+  if (stroke) {
+    ctx.strokeStyle = stroke;
     ctx.stroke();
   }
-  for (let i = 1; i <= 9; i += 1) {
-    const y = horizon + ((height - horizon) * i * i) / 81;
+}
+
+// A geometric fallback that uses the real object, camera, and wall coordinates. It
+// is intentionally a useful scout-frame, not a disconnected decorative illustration.
+function drawFallbackPrevis(canvas, shot, objects, walls = [], openings = [], controls = defaultControls(shot), timelineDuration = 0) {
+  const rect = canvas.getBoundingClientRect();
+  const outerWidth = Math.max(320, Math.round(rect.width || canvas.width || 960));
+  const outerHeight = Math.max(180, Math.round(rect.height || canvas.height || 540));
+  canvas.width = outerWidth;
+  canvas.height = outerHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const frame = previewFrame(outerWidth, outerHeight, controls.aspect);
+  const { width, height } = frame;
+  const subject = subjectForShot(shot, objects);
+  const framing = shotCamera(shot, subject, controls, timelineDuration);
+  const bounds = boundsForScene(objects, walls);
+  const rawProject = (point) => projectPoint(point, framing, width, height);
+  const subjectHeight = Math.max(4.2, Number(subject?.height) || 5.9);
+  const rawSubjectFeet = subject ? rawProject(vec(subject, 0.05)) : null;
+  const rawSubjectHead = subject ? rawProject(vec(subject, subjectHeight * 0.86)) : null;
+  const rawBodyHeight = rawSubjectFeet && rawSubjectHead ? Math.abs(rawSubjectFeet.y - rawSubjectHead.y) : 0;
+  const stabilizedScale = rawBodyHeight
+    ? clamp(clamp(height * 0.46, 132, 360) / rawBodyHeight, 0.2, 3.2)
+    : 1;
+  const project = (point) => {
+    const raw = rawProject(point);
+    if (!raw || !rawSubjectFeet || !rawSubjectHead) return raw;
+    return {
+      ...raw,
+      x: width / 2 + (raw.x - rawSubjectFeet.x) * stabilizedScale,
+      y: height * 0.78 + (raw.y - rawSubjectFeet.y) * stabilizedScale,
+    };
+  };
+  const subjectAnchor = subject ? vec(subject) : new THREE.Vector3();
+  const fallbackForward = framing.target.clone().sub(framing.position).setY(0).normalize();
+  const fallbackRight = new THREE.Vector3().crossVectors(fallbackForward, new THREE.Vector3(0, 1, 0)).normalize();
+  const composedActorPoints = (actor) => {
+    const relative = vec(actor).sub(subjectAnchor);
+    const lateral = relative.dot(fallbackRight);
+    const depth = relative.dot(fallbackForward);
+    const subjectActor = actor.id === subject?.id;
+    const figureHeight = clamp(
+      height * (subjectActor ? 0.47 : 0.31) * (1 - clamp(depth / 48, -0.18, 0.3)),
+      subjectActor ? 150 : 92,
+      subjectActor ? 310 : 220
+    );
+    const x = clamp(width / 2 + lateral * (width / Math.max(16, bounds.size * 0.78)), width * 0.12, width * 0.88);
+    const feetY = clamp(height * 0.79 + depth * 7, height * 0.62, height * 0.9);
+    return {
+      feet: { x, y: feetY },
+      shoulders: { x, y: feetY - figureHeight * 0.6 },
+      head: { x, y: feetY - figureHeight },
+    };
+  };
+
+  ctx.fillStyle = "#02060a";
+  ctx.fillRect(0, 0, outerWidth, outerHeight);
+  ctx.save();
+  ctx.translate(frame.x, frame.y);
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, "#0b1c2b");
+  gradient.addColorStop(0.62, "#122637");
+  gradient.addColorStop(1, "#263d49");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, width, height);
+  ctx.clip();
+
+  const half = bounds.size / 2;
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(119, 168, 187, 0.25)";
+  for (let i = -half; i <= half; i += 2) {
+    const a = project(new THREE.Vector3(bounds.center.x + i, 0.01, bounds.center.z - half));
+    const b = project(new THREE.Vector3(bounds.center.x + i, 0.01, bounds.center.z + half));
+    if (a && b) {
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    const c = project(new THREE.Vector3(bounds.center.x - half, 0.01, bounds.center.z + i));
+    const d = project(new THREE.Vector3(bounds.center.x + half, 0.01, bounds.center.z + i));
+    if (c && d) {
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(d.x, d.y);
+      ctx.stroke();
+    }
+  }
+
+  const items = [];
+  walls.forEach((wall) => {
+    wallSlices(wall, openings).forEach((segment) => {
+      const start = wallPoint(wall, segment.start);
+      const end = wallPoint(wall, segment.end);
+      const average = new THREE.Vector3((start.x + end.x) / 2, 4, (start.y + end.y) / 2);
+      items.push({
+        depth: average.distanceTo(framing.position),
+        draw: () => {
+          const a = project(new THREE.Vector3(start.x, 0, start.y));
+          const b = project(new THREE.Vector3(end.x, 0, end.y));
+          const c = project(new THREE.Vector3(end.x, 8, end.y));
+          const d = project(new THREE.Vector3(start.x, 8, start.y));
+          polygon(ctx, [a, b, c, d], wall.style === "translucent" ? "rgba(167, 205, 216, 0.28)" : "#c2c9cb", "#5b6c75");
+        },
+      });
+    });
+  });
+  objects.filter((object) => object.type === "prop").forEach((prop) => {
+    const width = Math.max(0.6, Number(prop.w) || 3);
+    const depth = Math.max(0.6, Number(prop.d) || 3);
+    const height = clamp(depth * 0.45, 0.75, 3);
+    const yaw = -(Number(prop.rot) || 0) * RAD;
+    const corners = [
+      [-width / 2, -depth / 2],
+      [width / 2, -depth / 2],
+      [width / 2, depth / 2],
+      [-width / 2, depth / 2],
+    ].map(([x, z]) => new THREE.Vector3(prop.x + x * Math.cos(yaw) - z * Math.sin(yaw), 0, prop.y + x * Math.sin(yaw) + z * Math.cos(yaw)));
+    items.push({
+      depth: vec(prop, height / 2).distanceTo(framing.position),
+      draw: () => {
+        const top = corners.map((corner) => project(corner.clone().setY(height)));
+        const bottom = corners.map((corner) => project(corner));
+        polygon(ctx, [bottom[0], bottom[1], top[1], top[0]], "#496675", "#2f4651");
+        polygon(ctx, [bottom[1], bottom[2], top[2], top[1]], "#3b5665", "#2f4651");
+        polygon(ctx, top, "#7894a4", "#b3c5cc");
+      },
+    });
+  });
+  objects.filter((object) => object.type === "actor").forEach((actor) => {
+        const appearance = appearanceForActor(actor);
+        const height = Math.max(4.2, appearance.height);
+    items.push({
+      depth: vec(actor, height / 2).distanceTo(framing.position),
+      priority: actor.id === subject?.id ? 2 : 1,
+      draw: () => {
+        const rawFeet = project(vec(actor, 0.05));
+        const rawShoulders = project(vec(actor, height * 0.67));
+        const rawHead = project(vec(actor, height * 0.86));
+        const rawFigureHeight = rawFeet && rawHead ? Math.abs(rawFeet.y - rawHead.y) : 0;
+        const composed = composedActorPoints(actor);
+        const useComposed = !rawFeet || !rawShoulders || !rawHead || rawFigureHeight < 50 || rawFigureHeight > height * 0.72;
+        const feet = useComposed ? composed.feet : rawFeet;
+        const shoulders = useComposed ? composed.shoulders : rawShoulders;
+        const head = useComposed ? composed.head : rawHead;
+        // Preserve the actual camera-side placement, while keeping human figures
+        // legible and compositionally useful when a software canvas is the renderer.
+        const bodyHeight = clamp(Math.abs(feet.y - head.y), 66, height * (actor.id === subject?.id ? 0.56 : 0.38));
+        const baseY = clamp(feet.y, height * 0.5, height * 0.9);
+        const headY = baseY - bodyHeight;
+        const shoulderY = headY + bodyHeight * 0.26;
+        const torsoBottom = baseY - bodyHeight * 0.32;
+        const silhouette = appearance.build === "broad" ? 1.16 : appearance.build === "lean" ? 0.88 : 1;
+        const torsoWidth = clamp(bodyHeight * (appearance.gender === "male" ? 0.24 : 0.21) * silhouette, 17, 82);
+        const headRadius = clamp(bodyHeight * 0.09, 8, 28);
+        const x = clamp(head.x, width * 0.1, width * 0.9);
+        const garment = appearance.wardrobe.color;
+        const garmentShadow = appearance.wardrobe.accent;
+        const selected = actor.id === subject?.id;
+        const alpha = selected ? 1 : 0.72;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(3, 10, 16, 0.42)";
+        ctx.beginPath();
+        ctx.ellipse(x, baseY + 5, torsoWidth * 0.7, Math.max(4, torsoWidth * 0.15), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = selected ? palette.amber : "#d9ebf1";
+        ctx.lineWidth = selected ? 3 : 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x - torsoWidth * 0.42, torsoBottom);
+        ctx.lineTo(x - torsoWidth * 0.22, baseY);
+        ctx.moveTo(x + torsoWidth * 0.42, torsoBottom);
+        ctx.lineTo(x + torsoWidth * 0.22, baseY);
+        ctx.stroke();
+        ctx.fillStyle = garmentShadow;
+        ctx.fillRect(x - torsoWidth * 0.34, torsoBottom - bodyHeight * 0.26, torsoWidth * 0.68, bodyHeight * 0.28);
+        ctx.fillStyle = garment;
+        ctx.beginPath();
+        if (appearance.gender === "male") {
+          ctx.roundRect(x - torsoWidth / 2, shoulderY, torsoWidth, torsoBottom - shoulderY, torsoWidth * 0.12);
+        } else {
+          ctx.moveTo(x, shoulderY);
+          ctx.lineTo(x - torsoWidth * 0.62, torsoBottom);
+          ctx.lineTo(x + torsoWidth * 0.62, torsoBottom);
+          ctx.closePath();
+        }
+        ctx.fill();
+        ctx.strokeStyle = selected ? palette.amber : "#d9ebf1";
+        ctx.lineWidth = selected ? 2.2 : 1;
+        ctx.beginPath();
+        ctx.moveTo(x - torsoWidth * 0.42, shoulderY + bodyHeight * 0.08);
+        ctx.lineTo(x - torsoWidth * 0.72, torsoBottom - bodyHeight * 0.03);
+        ctx.moveTo(x + torsoWidth * 0.42, shoulderY + bodyHeight * 0.08);
+        ctx.lineTo(x + torsoWidth * 0.72, torsoBottom - bodyHeight * 0.03);
+        ctx.stroke();
+        ctx.fillStyle = appearance.skin.color;
+        ctx.beginPath();
+        ctx.arc(x, headY + headRadius * 1.15, headRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = appearance.hairColor.color;
+        ctx.beginPath();
+        ctx.arc(x, headY + headRadius, headRadius * (appearance.hairStyle === "curly" ? 1.2 : 1.05), Math.PI, Math.PI * 2);
+        ctx.lineTo(x + headRadius, headY + headRadius * 1.2);
+        ctx.lineTo(x - headRadius, headY + headRadius * 1.2);
+        ctx.closePath();
+        ctx.fill();
+        if (appearance.hairStyle === "long" || appearance.hairStyle === "braids") {
+          ctx.fillRect(x - headRadius * 0.92, headY + headRadius * 0.7, headRadius * 1.84, bodyHeight * 0.16);
+        }
+        if (appearance.hairStyle === "bun") {
+          ctx.beginPath();
+          ctx.arc(x, headY + headRadius * 0.25, headRadius * 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (selected) {
+          ctx.strokeStyle = palette.amber;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.ellipse(x, baseY + 6, torsoWidth * 0.92, Math.max(8, torsoWidth * 0.24), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.fillStyle = selected ? palette.amber : "#e6f2f5";
+        ctx.font = `${selected ? "700" : "600"} 12px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(actor.name || "Performer", x, Math.max(22, headY - headRadius * 0.85));
+        ctx.restore();
+      },
+    });
+  });
+  items.sort((a, b) => (a.priority || 0) - (b.priority || 0) || b.depth - a.depth).forEach((item) => item.draw());
+
+  ctx.strokeStyle = "rgba(241, 175, 76, 0.42)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]);
+  [width / 3, (width / 3) * 2].forEach((x) => {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  });
+  [height / 3, (height / 3) * 2].forEach((y) => {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
-  }
-
-  walls.slice(0, 5).forEach((wall, index) => {
-    const x = width * (0.12 + (index * 0.2) % 0.75);
-    const y = horizon + (index % 2) * 24;
-    const span = Math.min(width * 0.52, Math.max(54, wallLength(wall) * 9));
-    ctx.fillStyle = wall.style === "translucent" ? "rgba(194, 204, 210, 0.38)" : "#c5cbd0";
-    ctx.fillRect(x, y - 60, Math.max(4, (wall.thickness || 0.32) * 15), 60);
-    ctx.fillRect(x, y - 60, span, Math.max(4, (wall.thickness || 0.32) * 15));
   });
-
-  const drawProp = (prop, index) => {
-    const x = width * (0.16 + ((index * 0.31) % 0.7));
-    const y = horizon + (height - horizon) * (0.56 + (index % 2) * 0.12);
-    const w = Math.min(width * 0.32, Math.max(40, prop.w * 13));
-    const d = Math.max(18, prop.d * 5);
-    ctx.fillStyle = "#6e8392";
-    ctx.fillRect(x - w / 2, y - d, w, d);
-    ctx.fillStyle = "#475d6d";
-    ctx.beginPath();
-    ctx.moveTo(x - w / 2, y - d);
-    ctx.lineTo(x - w / 2 + 12, y - d - 10);
-    ctx.lineTo(x + w / 2 + 12, y - d - 10);
-    ctx.lineTo(x + w / 2, y - d);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#bfd0da";
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(prop.name, x, y + 18);
-  };
-
-  objects.filter((object) => object.type === "prop").slice(0, 4).forEach(drawProp);
-  objects.filter((object) => object.type === "actor").forEach((actor, index) => {
-    const isSubject = subject?.id === actor.id;
-    const scale = isSubject ? 1.25 : 0.86;
-    const x = isSubject ? width / 2 : width * (index === 0 ? 0.26 : 0.74);
-    const floor = height * (isSubject ? 0.82 : 0.78);
-    const body = 68 * scale;
-    const color = (actor.gender || "female") === "male" ? palette.male : palette.female;
-    ctx.fillStyle = "#c98762";
-    ctx.beginPath();
-    ctx.arc(x, floor - body - 22 * scale, 14 * scale, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = color;
-    if ((actor.gender || "female") === "female") {
-      ctx.beginPath();
-      ctx.moveTo(x, floor - body);
-      ctx.lineTo(x - 27 * scale, floor - 6);
-      ctx.lineTo(x + 27 * scale, floor - 6);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      ctx.fillRect(x - 20 * scale, floor - body, 40 * scale, body - 7);
-    }
-    ctx.fillStyle = "#c8d4de";
-    ctx.font = `${isSubject ? 14 : 12}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.fillText(`${actor.name} · ${(actor.gender || "female") === "male" ? "M" : "F"}`, x, floor + 20);
-  });
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(241, 175, 76, 0.72)";
+  ctx.strokeRect(16, 16, width - 32, height - 32);
+  ctx.restore();
+  ctx.restore();
 }
 
 export function renderPrevisFrame({ shot, objects, walls = [], openings = [], width = 640, height = 360 }) {
@@ -324,53 +738,116 @@ export function renderPrevisFrame({ shot, objects, walls = [], openings = [], wi
     const fallbackCanvas = document.createElement("canvas");
     fallbackCanvas.width = width;
     fallbackCanvas.height = height;
-    drawFallbackPrevis(fallbackCanvas, shot, objects, walls);
-    return fallbackCanvas.toDataURL("image/jpeg", 0.9);
+    drawFallbackPrevis(fallbackCanvas, shot, objects, walls, openings);
+    return fallbackCanvas.toDataURL("image/jpeg", 0.92);
   };
   let renderer;
+  let scene;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
-  } catch {
-    return fallbackImage();
-  }
-  renderer.setSize(width, height, false);
-  renderer.setPixelRatio(1);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  const scene = makeScene(objects, walls, openings);
-  const subject = subjectForShot(shot, objects);
-  const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 150);
-  const framing = shotCamera(shot, subject, { orbit: 0, raise: 0, dolly: 0 });
-  camera.fov = THREE.MathUtils.clamp(framing.fov, 12, 95);
-  camera.position.copy(framing.position);
-  camera.lookAt(framing.target);
-  camera.updateProjectionMatrix();
-  renderer.render(scene, camera);
-  if (renderer.getContext().isContextLost()) {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
+    renderer.setSize(width, height, false);
+    renderer.setPixelRatio(1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    const subject = subjectForShot(shot, objects);
+    const sceneState = makeScene(objects, walls, openings, subject?.id);
+    scene = sceneState.scene;
+    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 200);
+    const framing = shotCamera(shot, subject, defaultControls(shot));
+    const frame = previewFrame(width, height, defaultControls(shot).aspect);
+    camera.fov = framing.fov;
+    camera.aspect = frame.aspect;
+    camera.position.copy(framing.position);
+    camera.lookAt(framing.target);
+    camera.updateProjectionMatrix();
+    renderer.setScissorTest(false);
+    renderer.setClearColor("#02060a", 1);
+    renderer.clear();
+    renderer.setScissorTest(true);
+    renderer.setViewport(frame.x, frame.y, frame.width, frame.height);
+    renderer.setScissor(frame.x, frame.y, frame.width, frame.height);
+    renderer.render(scene, camera);
+    renderer.setScissorTest(false);
+    if (renderer.getContext().isContextLost()) throw new Error("WebGL context lost");
+    const image = canvas.toDataURL("image/jpeg", 0.92);
+    disposeScene(scene);
     renderer.dispose();
     renderer.forceContextLoss?.();
+    return image;
+  } catch {
+    if (scene) disposeScene(scene);
+    renderer?.dispose();
+    renderer?.forceContextLoss?.();
     return fallbackImage();
   }
-  const image = canvas.toDataURL("image/jpeg", 0.9);
-  scene.traverse((node) => {
-    if (node.geometry) node.geometry.dispose();
-    if (node.material) {
-      const materials = Array.isArray(node.material) ? node.material : [node.material];
-      materials.forEach((m) => m.dispose());
-    }
-  });
-  renderer.dispose();
-  renderer.forceContextLoss?.();
-  return image;
 }
 
-export default function PrevisWindow({ shot, objects, walls = [], openings = [], onClose }) {
+export default function PrevisWindow({ shot, objects, walls = [], openings = [], onUpdateCamera, onClose }) {
   const canvasRef = useRef(null);
-  const drag = useRef(null);
-  const [controls, setControls] = useState({ orbit: 0, raise: 0, dolly: 0 });
+  const runtimeRef = useRef(null);
+  const controlsRef = useRef(defaultControls(shot));
+  const dragRef = useRef(null);
+  const motionFrameRef = useRef(null);
+  const [controls, setControls] = useState(() => defaultControls(shot));
   const [fallback, setFallback] = useState(false);
+  const [activePreset, setActivePreset] = useState("shot");
+  const [motionPlaying, setMotionPlaying] = useState(false);
   const subject = useMemo(() => subjectForShot(shot, objects), [shot, objects]);
+  const actorCount = objects.filter((object) => object.type === "actor").length;
+  const propCount = objects.filter((object) => object.type === "prop").length;
+  const motionMarks = motionMarksForCamera(shot?.cam);
+  const motionDuration = motionPathDuration(motionMarks);
+  const movingPerformers = objects.filter((object) => object.type === "actor" && motionMarksForCamera(object).length > 1);
+  const performerDuration = Math.max(0, ...movingPerformers.map((actor) => motionPathDuration(motionMarksForCamera(actor))));
+  const choreographyDuration = Math.max(motionDuration, performerDuration);
+  const hasMotionPath = choreographyDuration > 0;
+  const animatedObjects = useMemo(
+    () => animatePerformersAtProgress(objects, controls.motionProgress, choreographyDuration),
+    [choreographyDuration, objects, controls.motionProgress]
+  );
+  const animatedSubject = useMemo(() => subjectForShot(shot, animatedObjects), [shot, animatedObjects]);
+  const framing = useMemo(
+    () => shotCamera(shot, animatedSubject, controls, choreographyDuration),
+    [choreographyDuration, shot, animatedSubject, controls]
+  );
+
+  useEffect(() => {
+    const next = defaultControls(shot);
+    controlsRef.current = next;
+    setControls(next);
+    setActivePreset("shot");
+    setMotionPlaying(false);
+  }, [shot?.cam?.id]);
+
+  useEffect(() => {
+    controlsRef.current = controls;
+    runtimeRef.current?.render();
+  }, [controls]);
+
+  useEffect(() => {
+    if (!motionPlaying || !hasMotionPath) return undefined;
+
+    const startedAt = performance.now() - controlsRef.current.motionProgress * choreographyDuration * 1000;
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startedAt) / (choreographyDuration * 1000));
+      setControls((current) => ({ ...current, motionProgress: progress }));
+      if (progress >= 1) {
+        motionFrameRef.current = null;
+        setMotionPlaying(false);
+        return;
+      }
+      motionFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    motionFrameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (motionFrameRef.current) cancelAnimationFrame(motionFrameRef.current);
+      motionFrameRef.current = null;
+    };
+  }, [choreographyDuration, hasMotionPath, motionPlaying]);
 
   useEffect(() => {
     const onKey = (event) => {
@@ -380,207 +857,408 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  useEffect(() => () => {
+    if (motionFrameRef.current) cancelAnimationFrame(motionFrameRef.current);
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
+    const fallbackRender = () => {
+      const motionObjects = animatePerformersAtProgress(objects, controlsRef.current.motionProgress, choreographyDuration);
+      return drawFallbackPrevis(canvas, shot, motionObjects, walls, openings, controlsRef.current, choreographyDuration);
+    };
+
     if (fallback) {
-      const renderFallback = () => drawFallbackPrevis(canvas, shot, objects, walls);
-      renderFallback();
-      const observer = new ResizeObserver(renderFallback);
+      fallbackRender();
+      const observer = new ResizeObserver(fallbackRender);
       observer.observe(canvas);
-      return () => observer.disconnect();
+      runtimeRef.current = { render: fallbackRender };
+      return () => {
+        observer.disconnect();
+        if (runtimeRef.current?.render === fallbackRender) runtimeRef.current = null;
+      };
     }
+
     let renderer;
+    let sceneState;
+    let observer;
+    const onContextLost = (event) => {
+      event.preventDefault();
+      setFallback(true);
+    };
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        preserveDrawingBuffer: true,
+        powerPreference: "high-performance",
+      });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.08;
+      sceneState = makeScene(objects, walls, openings, subject?.id);
+      const camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.1, 200);
+      const render = () => {
+        const { width, height } = canvas.getBoundingClientRect();
+        if (!width || !height) return;
+        renderer.setSize(width, height, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        const frame = previewFrame(width, height, controlsRef.current.aspect);
+        renderer.setScissorTest(false);
+        renderer.setClearColor("#02060a", 1);
+        renderer.clear();
+        renderer.setScissorTest(true);
+        renderer.setViewport(frame.x, frame.y, frame.width, frame.height);
+        renderer.setScissor(frame.x, frame.y, frame.width, frame.height);
+        camera.aspect = frame.aspect;
+        const motionObjects = animatePerformersAtProgress(objects, controlsRef.current.motionProgress, choreographyDuration);
+        sceneState.actorMeshes.forEach((actorMesh, actorId) => {
+          const actor = motionObjects.find((object) => object.id === actorId);
+          if (!actor) return;
+          actorMesh.position.copy(vec(actor));
+          actorMesh.rotation.y = -(Number(actor.rot) || 0) * RAD;
+        });
+        const nextFraming = shotCamera(shot, subjectForShot(shot, motionObjects), controlsRef.current, choreographyDuration);
+        camera.fov = nextFraming.fov;
+        camera.position.copy(nextFraming.position);
+        camera.lookAt(nextFraming.target);
+        camera.updateProjectionMatrix();
+        renderer.render(sceneState.scene, camera);
+        renderer.setScissorTest(false);
+      };
+      canvas.addEventListener("webglcontextlost", onContextLost, false);
+      observer = new ResizeObserver(render);
+      observer.observe(canvas);
+      runtimeRef.current = { render };
+      render();
     } catch {
       setFallback(true);
-      return undefined;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    const scene = makeScene(objects, walls, openings);
-    const camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.1, 150);
-
-    const render = () => {
-      const { width, height } = canvas.getBoundingClientRect();
-      if (!width || !height) return;
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      const framing = shotCamera(shot, subject, controls);
-      camera.fov = THREE.MathUtils.clamp(framing.fov, 12, 95);
-      camera.position.copy(framing.position);
-      camera.lookAt(framing.target);
-      camera.updateProjectionMatrix();
-      renderer.render(scene, camera);
-      if (renderer.getContext().isContextLost()) setFallback(true);
-    };
-    render();
-    const observer = new ResizeObserver(render);
-    observer.observe(canvas);
     return () => {
-      observer.disconnect();
-      scene.traverse((node) => {
-        if (node.geometry) node.geometry.dispose();
-        if (node.material) {
-          const materials = Array.isArray(node.material) ? node.material : [node.material];
-          materials.forEach((m) => m.dispose());
-        }
-      });
-      renderer.dispose();
-      renderer.forceContextLoss?.();
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      observer?.disconnect();
+      if (runtimeRef.current) runtimeRef.current = null;
+      if (sceneState?.scene) disposeScene(sceneState.scene);
+      renderer?.dispose();
+      renderer?.forceContextLoss?.();
     };
-  }, [controls, fallback, objects, walls, openings, shot, subject]);
+  }, [choreographyDuration, fallback, objects, walls, openings, shot, subject]);
+
+  const applyPreset = (preset) => {
+    setMotionPlaying(false);
+    setActivePreset(preset.id);
+    setControls((current) => ({ ...current, ...preset.controls }));
+  };
+
+  const chooseAspect = (format) => {
+    setControls((current) => ({ ...current, aspect: format.id }));
+    onUpdateCamera?.(shot.cam.id, { previsAspect: format.id });
+  };
+
+  const toggleMotionPlayback = () => {
+    if (!hasMotionPath) return;
+    if (motionPlaying) {
+      setMotionPlaying(false);
+      return;
+    }
+    if (controlsRef.current.motionProgress >= 0.999) {
+      setControls((current) => ({ ...current, motionProgress: 0 }));
+    }
+    setMotionPlaying(true);
+  };
 
   const onPointerDown = (event) => {
+    setMotionPlaying(false);
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { x: event.clientX, y: event.clientY };
+    dragRef.current = { x: event.clientX, y: event.clientY };
   };
   const onPointerMove = (event) => {
-    if (!drag.current) return;
-    const dx = event.clientX - drag.current.x;
-    const dy = event.clientY - drag.current.y;
-    drag.current = { x: event.clientX, y: event.clientY };
+    if (!dragRef.current) return;
+    const dx = event.clientX - dragRef.current.x;
+    const dy = event.clientY - dragRef.current.y;
+    dragRef.current = { x: event.clientX, y: event.clientY };
+    setActivePreset("custom");
     setControls((current) => ({
       ...current,
-      orbit: THREE.MathUtils.clamp(current.orbit - dx * 0.35, -120, 120),
-      raise: THREE.MathUtils.clamp(current.raise + dy * 0.025, -4, 8),
+      orbit: clamp(current.orbit - dx * 0.32, -155, 155),
+      raise: clamp(current.raise + dy * 0.025, -4, 11),
     }));
   };
   const onPointerUp = () => {
-    drag.current = null;
+    dragRef.current = null;
   };
+
+  const activeAspect = aspectRatioFor(controls.aspect);
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`3D previs for ${shot.slate}`}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(4, 8, 12, 0.78)", backdropFilter: "blur(5px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5"
+      style={{ background: "rgba(2, 7, 12, 0.86)", backdropFilter: "blur(10px)" }}
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       <section
-        className="w-full max-w-5xl overflow-hidden rounded-lg shadow-2xl"
+        className="flex max-h-[96vh] w-full max-w-[82rem] flex-col overflow-hidden rounded-xl shadow-2xl"
         style={{ background: palette.panel, border: `1px solid ${palette.rule}` }}
       >
-        <header className="flex items-start justify-between gap-4 px-5 py-4" style={{ borderBottom: `1px solid ${palette.rule}` }}>
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em]" style={{ color: palette.dim }}>
-              3D previs
+        <header className="flex items-start justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4" style={{ borderBottom: `1px solid ${palette.rule}` }}>
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: palette.cyan }}>
+              Cinematic previs · live camera study
             </p>
-            <h2 className="mt-1 text-lg font-semibold" style={{ color: palette.text }}>
+            <h2 className="mt-1 truncate text-base font-semibold sm:text-xl" style={{ color: palette.text }}>
               {shot.slate}{shot.multicam ? ` · Camera ${shot.camLetter}` : ""} · {shot.description}
             </h2>
           </div>
           <button
             type="button"
+            aria-label="Close 3D preview"
             onClick={onClose}
-            className="min-h-11 min-w-11 rounded text-sm"
-            style={{ color: palette.text, border: `1px solid ${palette.rule}`, background: "#111820" }}
+            className="min-h-10 shrink-0 rounded-md px-3 text-sm font-medium"
+            style={{ color: palette.text, border: `1px solid ${palette.rule}`, background: palette.night }}
           >
             Close
           </button>
         </header>
 
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_17rem]">
-          <div className="relative min-h-[20rem]" style={{ background: palette.ink }}>
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="relative min-h-[21rem] bg-[#08111b] lg:min-h-[34rem]">
             <canvas
-              key={fallback ? "fallback" : "three"}
+              key={fallback ? "cinematic-canvas" : "three-renderer"}
               ref={canvasRef}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
               className="absolute inset-0 h-full w-full touch-none"
-              style={{ cursor: drag.current ? "grabbing" : "grab" }}
+              style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+              data-testid="canvas-3d-previs"
             />
-            {fallback && (
-              <div
-                className="absolute right-4 top-4 rounded px-3 py-2 text-xs"
-                style={{ background: "rgba(12, 18, 25, 0.78)", color: palette.dim, border: `1px solid rgba(146, 164, 177, 0.25)` }}
-              >
-                Canvas previs mode
-              </div>
-            )}
-            <div
-              className="absolute left-4 top-4 rounded px-3 py-2 text-xs"
-              style={{ background: "rgba(12, 18, 25, 0.78)", color: palette.dim, border: `1px solid rgba(146, 164, 177, 0.25)` }}
-            >
-              Drag to orbit and raise the camera.
+            <div className="pointer-events-none absolute inset-6 border" style={{ borderColor: "rgba(241, 175, 76, 0.5)" }} />
+            <div className="pointer-events-none absolute inset-x-6 top-1/3 border-t border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+            <div className="pointer-events-none absolute inset-x-6 bottom-1/3 border-t border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+            <div className="pointer-events-none absolute inset-y-6 left-1/3 border-l border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+            <div className="pointer-events-none absolute inset-y-6 right-1/3 border-l border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+            <div className="absolute left-4 top-4 rounded-md px-3 py-2 text-[11px] font-semibold tracking-wide" style={{ background: "rgba(5, 15, 23, 0.8)", color: palette.cyan, border: "1px solid rgba(104, 216, 219, 0.35)" }}>
+              {fallback ? "CINEMATIC CANVAS" : "LIVE 3D"} · {activeAspect.label} · {activePreset === "custom" ? "CUSTOM VIEW" : activePreset.toUpperCase()}
+            </div>
+            <div className="absolute bottom-4 left-4 rounded-md px-3 py-2 text-xs" style={{ background: "rgba(5, 15, 23, 0.82)", color: palette.dim, border: `1px solid ${palette.rule}` }}>
+              Drag to orbit and crane · Lens {Math.round(controls.focal)}mm · Focus {Math.round(controls.focus * 100)}%
             </div>
           </div>
 
-          <aside className="space-y-4 p-4" style={{ borderLeft: `1px solid ${palette.rule}` }}>
-            <div>
-              <p className="text-xs uppercase tracking-wider" style={{ color: palette.dim }}>Shot camera</p>
-              <p className="mt-1 text-sm font-semibold" style={{ color: palette.amber }}>
-                {shot.cam.focal}mm · {shot.cam.sensor}
+          <aside className="max-h-[42vh] overflow-y-auto p-4 lg:max-h-none" style={{ borderLeft: `1px solid ${palette.rule}` }}>
+            <section>
+              <p className="text-xs uppercase tracking-[0.17em]" style={{ color: palette.dim }}>Camera package</p>
+              <p className="mt-1 text-lg font-semibold" style={{ color: palette.amber }}>{Math.round(controls.focal)}mm · {shot.cam.sensor}</p>
+              <p className="mt-1 text-xs leading-relaxed" style={{ color: palette.dim }}>
+                {shot.height} · {shot.rel || "unlinked"} · {toFixed(framing.distance)} ft to focus
               </p>
-              <p className="mt-1 text-xs" style={{ color: palette.dim }}>
-                {shot.height} · {shot.rel || "unlinked"} · {shot.distance.toFixed(1)} ft
+            </section>
+
+            {hasMotionPath && (
+              <section
+                className="mt-5 rounded-md p-3"
+                style={{ background: "rgba(104, 216, 219, 0.08)", border: "1px solid rgba(104, 216, 219, 0.32)" }}
+                data-testid="previs-motion-controls"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.17em]" style={{ color: palette.cyan }}>
+                      {motionMarks.length > 1 ? "Shot choreography" : "Performer blocking"}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed" style={{ color: palette.dim }}>
+                      {motionMarks.length > 1 ? `${motionMarks.length} camera marks · ` : ""}
+                      {movingPerformers.length ? `${movingPerformers.length} moving performer${movingPerformers.length === 1 ? "" : "s"} · ` : ""}
+                      {choreographyDuration.toFixed(1)}s · {shot.cam?.aim && shot.cam?.linkTo ? "Track To active" : motionMarks.length > 1 ? "mark pan active" : "blocking preview"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleMotionPlayback}
+                    data-testid="button-previs-motion-play"
+                    className="min-h-8 shrink-0 rounded px-2.5 text-xs font-semibold"
+                    style={{ color: palette.cyan, border: "1px solid rgba(104, 216, 219, 0.48)", background: "rgba(5, 15, 23, 0.55)" }}
+                  >
+                    {motionPlaying ? "Pause" : controls.motionProgress >= 0.999 ? "Replay" : "Play"}
+                  </button>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.001"
+                  value={controls.motionProgress}
+                  onChange={(event) => {
+                    setMotionPlaying(false);
+                    setControls((current) => ({ ...current, motionProgress: Number(event.target.value) }));
+                  }}
+                  aria-label="Camera movement preview progress"
+                  data-testid="input-previs-motion-scrubber"
+                  className="mt-3 w-full accent-cyan-300"
+                />
+                <div className="mt-1 flex justify-between text-[10px] tabular-nums" style={{ color: palette.dim }}>
+                  <span>Mark 1</span>
+                  <span>{Math.round(controls.motionProgress * 100)}%</span>
+                  <span>Final mark</span>
+                </div>
+              </section>
+            )}
+
+            <section className="mt-5">
+              <p className="text-xs uppercase tracking-[0.17em]" style={{ color: palette.dim }}>Angle study</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {framingPresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    data-testid={`button-previs-${preset.id}`}
+                    className="min-h-9 rounded px-2 text-left text-xs font-medium"
+                    style={{
+                      color: activePreset === preset.id ? palette.amber : palette.text,
+                      background: activePreset === preset.id ? "rgba(241, 175, 76, 0.13)" : palette.night,
+                      border: `1px solid ${activePreset === preset.id ? palette.amber : palette.rule}`,
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="mt-5">
+              <p className="text-xs uppercase tracking-[0.17em]" style={{ color: palette.dim }}>Cinematic format</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {PREVIS_ASPECT_RATIOS.map((format) => (
+                  <button
+                    key={format.id}
+                    type="button"
+                    onClick={() => chooseAspect(format)}
+                    data-testid={`button-previs-aspect-${format.id}`}
+                    aria-pressed={controls.aspect === format.id}
+                    className="min-h-9 rounded px-2 text-left text-xs font-medium"
+                    style={{
+                      color: controls.aspect === format.id ? palette.cyan : palette.text,
+                      background: controls.aspect === format.id ? "rgba(104, 216, 219, 0.13)" : palette.night,
+                      border: `1px solid ${controls.aspect === format.id ? palette.cyan : palette.rule}`,
+                    }}
+                  >
+                    {format.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs leading-relaxed" style={{ color: palette.dim }}>
+                The selected format is saved to this camera and carries into exported previs frames.
               </p>
-            </div>
-            <label className="block text-xs" style={{ color: palette.text }}>
-              Orbit <span style={{ color: palette.dim }}>{Math.round(controls.orbit)}°</span>
-              <input
-                aria-label="Orbit camera"
-                type="range"
-                min="-120"
-                max="120"
-                value={controls.orbit}
-                onChange={(event) => setControls((current) => ({ ...current, orbit: +event.target.value }))}
-                className="mt-2 w-full"
-              />
-            </label>
-            <label className="block text-xs" style={{ color: palette.text }}>
-              Raise / lower <span style={{ color: palette.dim }}>{controls.raise.toFixed(1)} ft</span>
-              <input
-                aria-label="Raise or lower camera"
-                type="range"
-                min="-4"
-                max="8"
-                step="0.1"
-                value={controls.raise}
-                onChange={(event) => setControls((current) => ({ ...current, raise: +event.target.value }))}
-                className="mt-2 w-full"
-              />
-            </label>
-            <label className="block text-xs" style={{ color: palette.text }}>
-              Dolly <span style={{ color: palette.dim }}>{controls.dolly > 0 ? "+" : ""}{controls.dolly}%</span>
-              <input
-                aria-label="Dolly camera"
-                type="range"
-                min="-60"
-                max="80"
-                value={controls.dolly}
-                onChange={(event) => setControls((current) => ({ ...current, dolly: +event.target.value }))}
-                className="mt-2 w-full"
-              />
-            </label>
+            </section>
+
+            <section className="mt-5 space-y-4">
+              <label className="block text-xs" style={{ color: palette.text }}>
+                Lens focal <span style={{ color: palette.dim }}>{Math.round(controls.focal)}mm</span>
+                <input
+                  aria-label="Lens focal length"
+                  type="range"
+                  min="18"
+                  max="135"
+                  value={controls.focal}
+                  onChange={(event) => {
+                    setActivePreset("custom");
+                    setControls((current) => ({ ...current, focal: +event.target.value }));
+                  }}
+                  className="mt-2 w-full"
+                />
+              </label>
+              <label className="block text-xs" style={{ color: palette.text }}>
+                Orbit <span style={{ color: palette.dim }}>{Math.round(controls.orbit)}°</span>
+                <input
+                  aria-label="Orbit camera"
+                  type="range"
+                  min="-155"
+                  max="155"
+                  value={controls.orbit}
+                  onChange={(event) => {
+                    setActivePreset("custom");
+                    setControls((current) => ({ ...current, orbit: +event.target.value }));
+                  }}
+                  className="mt-2 w-full"
+                />
+              </label>
+              <label className="block text-xs" style={{ color: palette.text }}>
+                Raise / lower <span style={{ color: palette.dim }}>{toFixed(controls.raise)} ft</span>
+                <input
+                  aria-label="Raise or lower camera"
+                  type="range"
+                  min="-4"
+                  max="11"
+                  step="0.1"
+                  value={controls.raise}
+                  onChange={(event) => {
+                    setActivePreset("custom");
+                    setControls((current) => ({ ...current, raise: +event.target.value }));
+                  }}
+                  className="mt-2 w-full"
+                />
+              </label>
+              <label className="block text-xs" style={{ color: palette.text }}>
+                Dolly <span style={{ color: palette.dim }}>{controls.dolly > 0 ? "+" : ""}{Math.round(controls.dolly)}%</span>
+                <input
+                  aria-label="Dolly camera"
+                  type="range"
+                  min="-60"
+                  max="80"
+                  value={controls.dolly}
+                  onChange={(event) => {
+                    setActivePreset("custom");
+                    setControls((current) => ({ ...current, dolly: +event.target.value }));
+                  }}
+                  className="mt-2 w-full"
+                />
+              </label>
+              <label className="block text-xs" style={{ color: palette.text }}>
+                Focus height <span style={{ color: palette.dim }}>{Math.round(controls.focus * 100)}%</span>
+                <input
+                  aria-label="Focus height"
+                  type="range"
+                  min="0.15"
+                  max="0.9"
+                  step="0.01"
+                  value={controls.focus}
+                  onChange={(event) => {
+                    setActivePreset("custom");
+                    setControls((current) => ({ ...current, focus: +event.target.value }));
+                  }}
+                  className="mt-2 w-full"
+                />
+              </label>
+            </section>
+
             <button
               type="button"
-              onClick={() => setControls({ orbit: 0, raise: 0, dolly: 0 })}
-              className="min-h-11 w-full rounded text-sm font-medium"
-              style={{ color: palette.text, border: `1px solid ${palette.rule}`, background: "#111820" }}
+              onClick={() => applyPreset(framingPresets[0])}
+              className="mt-5 min-h-10 w-full rounded-md text-sm font-medium"
+              style={{ color: palette.text, border: `1px solid ${palette.rule}`, background: palette.night }}
             >
               Reset to shot camera
             </button>
-            <div className="rounded p-3 text-xs" style={{ background: "#111820", color: palette.dim, border: `1px solid ${palette.rule}` }}>
-              <p className="font-semibold" style={{ color: palette.text }}>Previs cast</p>
+
+            <section className="mt-4 rounded-md p-3 text-xs" style={{ background: palette.night, color: palette.dim, border: `1px solid ${palette.rule}` }}>
+              <p className="font-semibold" style={{ color: palette.text }}>Scene intelligence</p>
+              <p className="mt-2">{actorCount} performer{actorCount === 1 ? "" : "s"} · {propCount} set object{propCount === 1 ? "" : "s"} · {walls.length} wall segment{walls.length === 1 ? "" : "s"}</p>
               {objects.filter((object) => object.type === "actor").map((actor) => (
                 <p key={actor.id} className="mt-1">
-                  {actor.name}: {actor.gender === "male" ? "generic male" : "generic female"}
+                  <span style={{ color: actor.id === subject?.id ? palette.amber : palette.text }}>{actor.name}</span>: {appearanceForActor(actor).profile.label} · {appearanceForActor(actor).wardrobe.label}
                 </p>
               ))}
-              <p className="mt-2">
-                {objects.filter((object) => object.type === "prop").length} dimensional set object{objects.filter((object) => object.type === "prop").length === 1 ? "" : "s"} and {walls.length} wall segment{walls.length === 1 ? "" : "s"} in frame.
-              </p>
-            </div>
+            </section>
           </aside>
         </div>
       </section>

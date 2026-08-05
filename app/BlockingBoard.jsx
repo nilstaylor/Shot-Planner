@@ -7,9 +7,31 @@ import {
   migrateSceneDocument,
   normalizeLayerContext,
   resolveLayerPresentation,
+  stencilPaletteGroup,
   stencilIsAvailableInMode,
+  withStencilRole,
   withLayerDefaults,
 } from "./layerSystem";
+import {
+  buildSceneShareUrl,
+  MAX_SHARE_URL_LENGTH,
+  sceneFromShareHash,
+} from "./sceneShare";
+import {
+  PREVIS_CAST,
+  PREVIS_HAIR_COLORS,
+  PREVIS_HAIR_STYLES,
+  PREVIS_SKIN_TONES,
+  PREVIS_WARDROBES,
+  PREVIS_ASPECT_RATIOS,
+  profilePatch,
+} from "./previsCast";
+import {
+  motionPathDuration,
+  motionPathSvg,
+  normalizeHeading,
+  sampleMotionPath,
+} from "./motionPath";
 
 /* ============================================================
    BLOCKING BOARD
@@ -223,6 +245,43 @@ const DEFAULT_STENCILS = [
   ...TECHNICAL_STENCILS,
 ];
 
+const PALETTE_TABS = {
+  [DIRECTOR]: [
+    { id: "director-all", label: "All essentials", description: "The complete director staging kit." },
+    { id: "director-set", label: "Set & furniture", description: "Furniture, fixtures, and practical set pieces." },
+    { id: "director-space", label: "Architecture", description: "Rooms, doors, walls, and location geometry." },
+    { id: "director-location", label: "Locations", description: "Exterior, vehicles, and location markers." },
+  ],
+  [CINEMATOGRAPHY]: [
+    { id: "technical-all", label: "All technical", description: "The complete camera, lighting, grip, and rigging catalog." },
+    { id: "technical-camera", label: "Camera", description: "Bodies, rigs, and movement tools." },
+    { id: "technical-lighting", label: "Lighting", description: "LED, HMI, fluorescent, tungsten, and practical fixtures." },
+    { id: "technical-control", label: "Light control", description: "Rags, frames, boards, and bounce control." },
+    { id: "technical-grip", label: "Grip & rigging", description: "Support, rigging, stands, and overhead systems." },
+    { id: "technical-staging", label: "Set & staging", description: "Shared director assets for a complete technical plan." },
+  ],
+};
+
+const DIRECTOR_SET_CATEGORIES = new Set(["Furniture", "Fixtures", "Misc", "Labels"]);
+const DIRECTOR_SPACE_CATEGORIES = new Set(["Architecture", "Rooms & Spaces"]);
+const DIRECTOR_LOCATION_CATEGORIES = new Set(["Exterior", "Vehicles"]);
+
+const stencilMatchesPalette = (stencil, focus) => {
+  const classified = withStencilRole(stencil);
+  const group = stencilPaletteGroup(classified);
+  if (focus === "director-all") return classified.targetMode !== CINEMATOGRAPHY;
+  if (focus === "director-set") return classified.targetMode !== CINEMATOGRAPHY && DIRECTOR_SET_CATEGORIES.has(classified.category);
+  if (focus === "director-space") return classified.targetMode !== CINEMATOGRAPHY && DIRECTOR_SPACE_CATEGORIES.has(classified.category);
+  if (focus === "director-location") return classified.targetMode !== CINEMATOGRAPHY && DIRECTOR_LOCATION_CATEGORIES.has(classified.category);
+  if (focus === "technical-all") return classified.targetMode === CINEMATOGRAPHY;
+  if (focus === "technical-camera") return group === "CAMERA" || group === "MOVEMENT";
+  if (focus === "technical-lighting") return group === "LIGHTING";
+  if (focus === "technical-control") return group === "LIGHT_CONTROL";
+  if (focus === "technical-grip") return group === "GRIP_RIGGING";
+  if (focus === "technical-staging") return classified.targetMode !== CINEMATOGRAPHY;
+  return true;
+};
+
 const PAPER = {
   ink: "#f4f2ed",
   panel: "#151d26",
@@ -330,6 +389,22 @@ const doorArcPath = (width, hinge, swing) => {
   return `M ${hingeX} 0 A ${width} ${width} 0 0 ${sweep} ${leafX} ${y}`;
 };
 
+const motionMarks = (object) => (Array.isArray(object?.motionPath) ? object.motionPath : []);
+const motionDuration = (object) => motionPathDuration(motionMarks(object));
+const cameraMotionMarks = motionMarks;
+const cameraMotionDuration = motionDuration;
+const actorMotionMarks = motionMarks;
+const actorMotionDuration = motionDuration;
+
+const motionMark = (camera, id = uid("m"), overrides = {}) => ({
+  id,
+  x: Number.isFinite(camera?.x) ? camera.x : 0,
+  y: Number.isFinite(camera?.y) ? camera.y : 0,
+  rot: normalizeHeading(camera?.rot ?? 0),
+  duration: 1.5,
+  ...overrides,
+});
+
 /* ---------------- shot description engine ---------------- */
 
 function frameHeight(distanceFt, focal, sensorKey) {
@@ -373,8 +448,9 @@ function heightNote(h) {
 let seq = 0;
 const uid = (p) => `${p}${Date.now().toString(36)}${++seq}`;
 
-const newActor = (x, y, name, gender = "female") =>
-  withLayerDefaults(
+const newActor = (x, y, name, gender = "female", profileId = null) => {
+  const appearance = profilePatch(profileId || (gender === "male" ? "marcus" : "maya"));
+  return withLayerDefaults(
     {
       id: uid("a"),
       type: "actor",
@@ -382,11 +458,11 @@ const newActor = (x, y, name, gender = "female") =>
       x,
       y,
       rot: 180,
-      height: SUBJECT_HEIGHT,
-      gender,
+      ...appearance,
     },
     DIRECTOR
   );
+};
 
 const newCamera = (x, y, name, extra = {}) =>
   withLayerDefaults(
@@ -409,6 +485,8 @@ const newCamera = (x, y, name, extra = {}) =>
       aim: true,
       color: "#e8a33d",
       showFov: true,
+      previsAspect: "2.39",
+      motionPath: [],
       ...extra,
     },
     extra.layerContext || DIRECTOR
@@ -466,12 +544,18 @@ export default function BlockingBoard() {
   const [blueprint, setBlueprint] = useState(null);
   const [previewShot, setPreviewShot] = useState(null);
   const [includePrevisInPrint, setIncludePrevisInPrint] = useState(false);
+  const [shareDialog, setShareDialog] = useState(null);
   const [layerMode, setLayerMode] = useState(DIRECTOR);
   const [cinematographyDisplay, setCinematographyDisplay] = useState("hide");
   const [stencils, setStencils] = useState(DEFAULT_STENCILS);
   const [stencilQuery, setStencilQuery] = useState("");
+  const [stencilFocus, setStencilFocus] = useState("director-all");
   const [catalogNote, setCatalogNote] = useState("Built in set. No stencil folder found yet.");
   const [history, setHistory] = useState([]);
+  const [pathEditCameraId, setPathEditCameraId] = useState(null);
+  const [pathEditActorId, setPathEditActorId] = useState(null);
+  const [pathPlayback, setPathPlayback] = useState({ cameraId: null, actorId: null, progress: 0, playing: false });
+  const [contextMenu, setContextMenu] = useState(null);
   const [meta, setMeta] = useState({
     production: "Untitled",
     director: "",
@@ -490,6 +574,9 @@ export default function BlockingBoard() {
   const blueprintRef = useRef(null);
   const historyRef = useRef([]);
   const lastHistoryRef = useRef({ key: null, at: 0, value: null });
+  const sharedSceneLoadedRef = useRef(false);
+  const playbackStartedAtRef = useRef(null);
+  const playbackFrameRef = useRef(null);
 
   const snapshot = useCallback(
     () => JSON.parse(JSON.stringify({ objects, walls, openings, line, meta, blueprint })),
@@ -553,7 +640,7 @@ export default function BlockingBoard() {
         if (cancelled) return;
         const loaded = (data.stencils || [])
           .filter((s) => s && s.file)
-          .map((s) => ({
+          .map((s) => withStencilRole({
             id: s.id || s.file,
             name: s.name || "Untitled",
             category: s.category || "Uncategorized",
@@ -561,9 +648,8 @@ export default function BlockingBoard() {
             d: Number(s.d) > 0 ? Number(s.d) : 3,
             tint: s.tint || "light",
             file: /^(https?:|data:|\/)/.test(s.file) ? s.file : base + s.file,
-            targetMode:
-              s.targetMode === CINEMATOGRAPHY ? CINEMATOGRAPHY : s.targetMode === "BOTH" ? "BOTH" : DIRECTOR,
-            technicalFamily: s.technicalFamily || "BLOCKING",
+            targetMode: s.targetMode,
+            technicalFamily: s.technicalFamily,
             searchTags: Array.isArray(s.searchTags) ? s.searchTags : [],
           }));
         if (loaded.length) {
@@ -598,12 +684,61 @@ export default function BlockingBoard() {
     [layerPresentation]
   );
 
+  const switchLayerWorkspace = useCallback((nextMode) => {
+    setLayerMode(nextMode);
+    setStencilFocus(nextMode === CINEMATOGRAPHY ? "technical-all" : "director-all");
+    setStencilQuery("");
+  }, []);
+
+  useEffect(() => {
+    const playbackObjectId = pathPlayback.cameraId || pathPlayback.actorId;
+    if (!pathPlayback.playing || !playbackObjectId) return undefined;
+    const playbackObject = byId[playbackObjectId];
+    const duration = motionDuration(playbackObject);
+    if (!playbackObject || motionMarks(playbackObject).length < 2 || duration <= 0) {
+      setPathPlayback((current) => ({ ...current, playing: false }));
+      return undefined;
+    }
+
+    if (playbackStartedAtRef.current == null) {
+      playbackStartedAtRef.current = performance.now() - pathPlayback.progress * duration * 1000;
+    }
+
+    const tick = (now) => {
+      const nextProgress = clamp((now - playbackStartedAtRef.current) / (duration * 1000), 0, 1);
+      setPathPlayback((current) => ({ ...current, progress: nextProgress, playing: nextProgress < 1 }));
+      if (nextProgress < 1) playbackFrameRef.current = requestAnimationFrame(tick);
+      else {
+        playbackStartedAtRef.current = null;
+        playbackFrameRef.current = null;
+      }
+    };
+
+    playbackFrameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (playbackFrameRef.current) cancelAnimationFrame(playbackFrameRef.current);
+      playbackFrameRef.current = null;
+    };
+  }, [byId, pathPlayback.actorId, pathPlayback.cameraId, pathPlayback.playing]);
+
   const renderNodes = useMemo(
     () =>
       objects
-        .map((object) => ({ object, presentation: layerPresentation(object) }))
+        .map((source) => {
+          const isPreviewing =
+            (source.type === "camera" && pathPlayback.cameraId === source.id) ||
+            (source.type === "actor" && pathPlayback.actorId === source.id);
+          const motionPose = isPreviewing && motionMarks(source).length > 1
+            ? sampleMotionPath(motionMarks(source), pathPlayback.progress)
+            : null;
+          return {
+            source,
+            object: motionPose ? { ...source, ...motionPose } : source,
+            presentation: layerPresentation(source),
+          };
+        })
         .filter(({ presentation }) => presentation.render),
-    [layerPresentation, objects]
+    [layerPresentation, objects, pathPlayback.actorId, pathPlayback.cameraId, pathPlayback.progress]
   );
   const renderedProps = renderNodes.filter(({ object }) => object.type === "prop");
   const renderedActors = renderNodes.filter(({ object }) => object.type === "actor");
@@ -696,11 +831,22 @@ export default function BlockingBoard() {
         setWallDraft(null);
         setWallHover(null);
         setWallTool("select");
+        setPathEditCameraId(null);
+        setPathEditActorId(null);
+        setContextMenu(null);
+        stopCameraPath();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selected, selectedWall, selectedOpening, objects, walls, openings, undo]);
+
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener("pointerdown", closeMenu);
+    return () => window.removeEventListener("pointerdown", closeMenu);
+  }, [contextMenu]);
 
   const toWorld = useCallback(
     (e) => {
@@ -768,12 +914,16 @@ export default function BlockingBoard() {
   const headingFor = useCallback(
     (o) => {
       if (o.type === "camera" && o.aim && o.linkTo && byId[o.linkTo]) {
-        const t = byId[o.linkTo];
+        const target = byId[o.linkTo];
+        const t =
+          pathPlayback.actorId === target.id && actorMotionMarks(target).length > 1
+            ? { ...target, ...sampleMotionPath(actorMotionMarks(target), pathPlayback.progress) }
+            : target;
         return headingOf(t.x - o.x, t.y - o.y);
       }
       return o.rot;
     },
-    [byId]
+    [byId, pathPlayback.actorId, pathPlayback.progress]
   );
 
   /* ---- moving an actor carries its linked cameras with it ---- */
@@ -786,9 +936,24 @@ export default function BlockingBoard() {
       const dx = nx - target.x;
       const dy = ny - target.y;
       return prev.map((o) => {
-        if (o.id === id) return { ...o, x: nx, y: ny };
+        if (o.id === id) {
+          const path = motionMarks(o);
+          return {
+            ...o,
+            x: nx,
+            y: ny,
+            ...((o.type === "camera" || o.type === "actor") && path.length
+              ? { motionPath: path.map((mark, index) => (index === 0 ? { ...mark, x: nx, y: ny } : mark)) }
+              : {}),
+          };
+        }
         if (target.type === "actor" && o.type === "camera" && o.linkTo === id) {
-          return { ...o, x: o.x + dx, y: o.y + dy };
+          return {
+            ...o,
+            x: o.x + dx,
+            y: o.y + dy,
+            motionPath: cameraMotionMarks(o).map((mark) => ({ ...mark, x: mark.x + dx, y: mark.y + dy })),
+          };
         }
         return o;
       });
@@ -803,10 +968,28 @@ export default function BlockingBoard() {
       if (!target) return prev;
       const delta = newRot - target.rot;
       return prev.map((o) => {
-        if (o.id === id) return { ...o, rot: (newRot + 360) % 360 };
+        if (o.id === id) {
+          const normalized = normalizeHeading(newRot);
+          return {
+            ...o,
+            rot: normalized,
+            ...((o.type === "camera" || o.type === "actor") && motionMarks(o).length
+              ? { motionPath: motionMarks(o).map((mark, index) => (index === 0 ? { ...mark, rot: normalized } : mark)) }
+              : {}),
+          };
+        }
         if (target.type === "actor" && o.type === "camera" && o.linkTo === id) {
           const p = rotatePoint(o, target, delta);
-          return { ...o, x: p.x, y: p.y, rot: (o.rot + delta + 360) % 360 };
+          return {
+            ...o,
+            x: p.x,
+            y: p.y,
+            rot: normalizeHeading(o.rot + delta),
+            motionPath: cameraMotionMarks(o).map((mark) => {
+              const rotated = rotatePoint(mark, target, delta);
+              return { ...mark, x: rotated.x, y: rotated.y, rot: normalizeHeading(mark.rot + delta) };
+            }),
+          };
         }
         return o;
       });
@@ -818,7 +1001,261 @@ export default function BlockingBoard() {
     const isLayerControl = Object.prototype.hasOwnProperty.call(fields, "isVisible") || Object.prototype.hasOwnProperty.call(fields, "isLocked");
     if (!target || (!canInteractWithObject(target) && !isLayerControl)) return;
     if (record) recordUndo(`object:${id}`);
-    setObjects((prev) => prev.map((o) => (o.id === id ? { ...o, ...fields } : o)));
+    setObjects((prev) =>
+      prev.map((o) => {
+        if (o.id !== id) return o;
+        const next = { ...o, ...fields };
+        if ((o.type === "camera" || o.type === "actor") && motionMarks(o).length) {
+          const first = motionMarks(o)[0];
+          const x = Object.prototype.hasOwnProperty.call(fields, "x") ? fields.x : first.x;
+          const y = Object.prototype.hasOwnProperty.call(fields, "y") ? fields.y : first.y;
+          const rot = Object.prototype.hasOwnProperty.call(fields, "rot") ? normalizeHeading(fields.rot) : first.rot;
+          next.motionPath = motionMarks(o).map((mark, index) => (index === 0 ? { ...mark, x, y, rot } : mark));
+        }
+        return next;
+      })
+    );
+  };
+
+  const replaceCameraMotionPath = (cameraId, nextPath, key = "camera-path") => {
+    const camera = byId[cameraId];
+    if (!camera || !canInteractWithObject(camera)) return;
+    recordUndo(key);
+    setObjects((previous) =>
+      previous.map((object) =>
+        object.id === cameraId
+          ? {
+              ...object,
+              motionPath: nextPath,
+              move: nextPath.length > 1 && object.move === "Static" ? "Track" : object.move,
+            }
+          : object
+      )
+    );
+  };
+
+  const startCameraPath = (cameraId) => {
+    const camera = byId[cameraId];
+    if (!camera || !canInteractWithObject(camera)) return;
+    const marks = cameraMotionMarks(camera);
+    if (!marks.length) replaceCameraMotionPath(cameraId, [motionMark(camera, uid("m"), { duration: 0 })], "start-camera-path");
+    setPathPlayback({ cameraId: null, actorId: null, progress: 0, playing: false });
+    playbackStartedAtRef.current = null;
+    setPathEditCameraId(cameraId);
+    setSelected(cameraId);
+    setPane("object");
+  };
+
+  const addCameraMark = (cameraId) => {
+    const camera = byId[cameraId];
+    if (!camera || !canInteractWithObject(camera)) return;
+    const marks = cameraMotionMarks(camera);
+    const first = marks[0] || motionMark(camera, uid("m"), { duration: 0 });
+    const last = marks.at(-1) || first;
+    const forward = facing(last.rot);
+    const next = motionMark(
+      { ...camera, x: last.x + forward.x * 6, y: last.y + forward.y * 6, rot: last.rot },
+      uid("m"),
+      { duration: 1.5 }
+    );
+    replaceCameraMotionPath(cameraId, [...(marks.length ? marks : [first]), next], "add-camera-mark");
+    setPathEditCameraId(cameraId);
+  };
+
+  const removeCameraMark = (cameraId, markId) => {
+    const camera = byId[cameraId];
+    const marks = cameraMotionMarks(camera);
+    if (!camera || marks.length <= 1) return;
+    const next = marks.filter((mark) => mark.id !== markId);
+    replaceCameraMotionPath(cameraId, next, "remove-camera-mark");
+    if (pathPlayback.cameraId === cameraId) {
+      setPathPlayback({ cameraId: null, actorId: null, progress: 0, playing: false });
+      playbackStartedAtRef.current = null;
+    }
+  };
+
+  const clearCameraPath = (cameraId) => {
+    const camera = byId[cameraId];
+    if (!camera || !cameraMotionMarks(camera).length) return;
+    replaceCameraMotionPath(cameraId, [], "clear-camera-path");
+    setPathEditCameraId((current) => (current === cameraId ? null : current));
+    if (pathPlayback.cameraId === cameraId) {
+      setPathPlayback({ cameraId: null, actorId: null, progress: 0, playing: false });
+      playbackStartedAtRef.current = null;
+    }
+  };
+
+  const updateCameraMark = (cameraId, markId, fields, key = "edit-camera-mark") => {
+    const camera = byId[cameraId];
+    if (!camera || !canInteractWithObject(camera)) return;
+    recordUndo(key);
+    setObjects((previous) =>
+      previous.map((object) => {
+        if (object.id !== cameraId) return object;
+        const motionPath = cameraMotionMarks(object).map((mark, index) => {
+          if (mark.id !== markId) return mark;
+          const next = {
+            ...mark,
+            ...fields,
+            ...(Object.prototype.hasOwnProperty.call(fields, "rot") ? { rot: normalizeHeading(fields.rot) } : {}),
+          };
+          if (index === 0) return next;
+          return next;
+        });
+        const start = motionPath[0];
+        return start ? { ...object, motionPath, x: start.x, y: start.y, rot: start.rot } : { ...object, motionPath };
+      })
+    );
+  };
+
+  const playCameraPath = (cameraId, restart = true) => {
+    const camera = byId[cameraId];
+    if (!camera || cameraMotionMarks(camera).length < 2 || cameraMotionDuration(camera) <= 0) return;
+    const progress = restart || pathPlayback.cameraId !== cameraId ? 0 : pathPlayback.progress;
+    playbackStartedAtRef.current = performance.now() - progress * cameraMotionDuration(camera) * 1000;
+    setPathPlayback({ cameraId, actorId: null, progress, playing: true });
+  };
+
+  const stopCameraPath = () => {
+    setPathPlayback((current) => ({ ...current, playing: false }));
+    playbackStartedAtRef.current = null;
+  };
+
+  const replaceActorMotionPath = (actorId, nextPath, key = "actor-path") => {
+    const actor = byId[actorId];
+    if (!actor || actor.type !== "actor" || !canInteractWithObject(actor)) return;
+    recordUndo(key);
+    setObjects((previous) =>
+      previous.map((object) =>
+        object.id === actorId
+          ? { ...object, motionPath: nextPath }
+          : object
+      )
+    );
+  };
+
+  const startActorPath = (actorId) => {
+    const actor = byId[actorId];
+    if (!actor || actor.type !== "actor" || !canInteractWithObject(actor)) return;
+    const marks = actorMotionMarks(actor);
+    if (!marks.length) replaceActorMotionPath(actorId, [motionMark(actor, uid("m"), { duration: 0 })], "start-actor-path");
+    setPathPlayback({ cameraId: null, actorId: null, progress: 0, playing: false });
+    playbackStartedAtRef.current = null;
+    setPathEditCameraId(null);
+    setPathEditActorId(actorId);
+    setSelected(actorId);
+    setPane("object");
+  };
+
+  const addActorMark = (actorId) => {
+    const actor = byId[actorId];
+    if (!actor || actor.type !== "actor" || !canInteractWithObject(actor)) return;
+    const marks = actorMotionMarks(actor);
+    const first = marks[0] || motionMark(actor, uid("m"), { duration: 0 });
+    const last = marks.at(-1) || first;
+    const forward = facing(last.rot);
+    const next = motionMark(
+      { ...actor, x: last.x + forward.x * 4, y: last.y + forward.y * 4, rot: last.rot },
+      uid("m"),
+      { duration: 1.5 }
+    );
+    replaceActorMotionPath(actorId, [...(marks.length ? marks : [first]), next], "add-actor-mark");
+    setPathEditCameraId(null);
+    setPathEditActorId(actorId);
+  };
+
+  const updateActorMark = (actorId, markId, fields, key = "edit-actor-mark") => {
+    const actor = byId[actorId];
+    if (!actor || actor.type !== "actor" || !canInteractWithObject(actor)) return;
+    recordUndo(key);
+    setObjects((previous) =>
+      previous.map((object) => {
+        if (object.id !== actorId) return object;
+        const motionPath = actorMotionMarks(object).map((mark) =>
+          mark.id === markId
+            ? {
+                ...mark,
+                ...fields,
+                ...(Object.prototype.hasOwnProperty.call(fields, "rot") ? { rot: normalizeHeading(fields.rot) } : {}),
+              }
+            : mark
+        );
+        const start = motionPath[0];
+        return start ? { ...object, motionPath, x: start.x, y: start.y, rot: start.rot } : { ...object, motionPath };
+      })
+    );
+  };
+
+  const removeActorMark = (actorId, markId) => {
+    const actor = byId[actorId];
+    const marks = actorMotionMarks(actor);
+    if (!actor || marks.length <= 1) return;
+    replaceActorMotionPath(actorId, marks.filter((mark) => mark.id !== markId), "remove-actor-mark");
+    if (pathPlayback.actorId === actorId) {
+      setPathPlayback({ cameraId: null, actorId: null, progress: 0, playing: false });
+      playbackStartedAtRef.current = null;
+    }
+  };
+
+  const clearActorPath = (actorId) => {
+    const actor = byId[actorId];
+    if (!actor || !actorMotionMarks(actor).length) return;
+    replaceActorMotionPath(actorId, [], "clear-actor-path");
+    setPathEditActorId((current) => (current === actorId ? null : current));
+    if (pathPlayback.actorId === actorId) {
+      setPathPlayback({ cameraId: null, actorId: null, progress: 0, playing: false });
+      playbackStartedAtRef.current = null;
+    }
+  };
+
+  const playActorPath = (actorId, restart = true) => {
+    const actor = byId[actorId];
+    if (!actor || actorMotionMarks(actor).length < 2 || actorMotionDuration(actor) <= 0) return;
+    const progress = restart || pathPlayback.actorId !== actorId ? 0 : pathPlayback.progress;
+    playbackStartedAtRef.current = performance.now() - progress * actorMotionDuration(actor) * 1000;
+    setPathPlayback({ cameraId: null, actorId, progress, playing: true });
+  };
+
+  const openObjectContextMenu = (event, object) => {
+    if (!canInteractWithObject(object)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setSelected(object.id);
+    setSelectedWall(null);
+    setSelectedOpening(null);
+    setPane("object");
+    setContextMenu({
+      id: object.id,
+      x: Math.max(8, Math.min(event.clientX, window.innerWidth - 236)),
+      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 280)),
+    });
+  };
+
+  const faceNearestCamera = (actorId) => {
+    const actor = byId[actorId];
+    if (!actor || actor.type !== "actor") return;
+    const camera = cameras.reduce(
+      (nearest, candidate) => (!nearest || dist(actor, candidate) < dist(actor, nearest) ? candidate : nearest),
+      null
+    );
+    if (!camera) return;
+    rotateObject(actorId, Math.round(headingOf(camera.x - actor.x, camera.y - actor.y)));
+  };
+
+  const setCameraTrackTarget = (actorId) => {
+    const camera = selected && byId[selected]?.type === "camera"
+      ? byId[selected]
+      : cameras.reduce(
+          (nearest, candidate) => {
+            const actor = byId[actorId];
+            return !nearest || (actor && dist(actor, candidate) < dist(actor, nearest)) ? candidate : nearest;
+          },
+          null
+        );
+    if (!camera) return;
+    patch(camera.id, { linkTo: actorId, aim: true });
+    setSelected(camera.id);
+    setPane("object");
   };
 
   const removeObject = (id) => {
@@ -858,6 +1295,7 @@ export default function BlockingBoard() {
   /* ---- pointer handling ---- */
 
   const onObjectDown = (e, o, mode) => {
+    if (e.button !== 0) return;
     if (!canInteractWithObject(o)) return;
     e.stopPropagation();
     const w = toWorld(e);
@@ -873,6 +1311,31 @@ export default function BlockingBoard() {
       startW: o.w,
       startD: o.d,
       aspect: o.w && o.d ? o.w / o.d : null,
+      before: snapshot(),
+      changed: false,
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const onMotionMarkDown = (e, target, mark, mode = "motion-mark-move") => {
+    if (e.button !== 0) return;
+    if (!canInteractWithObject(target)) return;
+    e.stopPropagation();
+    setSelected(target.id);
+    setSelectedWall(null);
+    setSelectedOpening(null);
+    if (target.type === "actor") {
+      setPathEditCameraId(null);
+      setPathEditActorId(target.id);
+    } else {
+      setPathEditActorId(null);
+      setPathEditCameraId(target.id);
+    }
+    setPane("object");
+    drag.current = {
+      mode,
+      id: target.id,
+      markId: mark.id,
       before: snapshot(),
       changed: false,
     };
@@ -943,7 +1406,29 @@ export default function BlockingBoard() {
   };
 
   const onCanvasDown = (e) => {
+    if (e.button !== 0) return;
     const point = toWorld(e);
+    const pathEditObjectId = pathEditCameraId || pathEditActorId;
+    if (pathEditObjectId) {
+      const target = byId[pathEditObjectId];
+      if (target && canInteractWithObject(target)) {
+        const marks = motionMarks(target);
+        const first = marks[0] || motionMark(target, uid("m"), { duration: 0 });
+        const last = marks.at(-1) || first;
+        const nextPoint = snapWorld(point, last);
+        if (dist(nextPoint, last) > 0.15) {
+          const nextPath = [
+            ...(marks.length ? marks : [first]),
+            motionMark({ ...target, ...nextPoint, rot: last.rot }, uid("m"), { duration: 1.5 }),
+          ];
+          if (target.type === "actor") replaceActorMotionPath(target.id, nextPath, "place-actor-mark");
+          else replaceCameraMotionPath(target.id, nextPath, "place-camera-mark");
+        }
+        return;
+      }
+      setPathEditCameraId(null);
+      setPathEditActorId(null);
+    }
     if (wallTool === "wall") {
       const next = snapWorld(point, wallDraft);
       setSelected(null);
@@ -1041,6 +1526,40 @@ export default function BlockingBoard() {
       const nextWidth = clamp(Math.abs(projection.t - opening.t) * wallLength(wall) * 2, 0.5, wallLength(wall) * 0.92);
       d.changed = true;
       patchOpening(d.id, { width: +nextWidth.toFixed(2) }, false);
+      return;
+    }
+    if (d.mode === "motion-mark-move") {
+      const target = byId[d.id];
+      const mark = motionMarks(target).find((item) => item.id === d.markId);
+      if (!target || !mark) return;
+      const marks = motionMarks(target);
+      const previous = d.markId === marks[0]?.id ? null : marks[marks.findIndex((item) => item.id === d.markId) - 1];
+      const next = snapWorld(w, previous);
+      d.changed = d.changed || !samePoint(next, mark);
+      setObjects((previousObjects) =>
+        previousObjects.map((object) => {
+          if (object.id !== d.id) return object;
+          const motionPath = motionMarks(object).map((item) => (item.id === d.markId ? { ...item, ...next } : item));
+          const start = motionPath[0];
+          return { ...object, motionPath, x: start.x, y: start.y };
+        })
+      );
+      return;
+    }
+    if (d.mode === "motion-mark-rotate") {
+      const target = byId[d.id];
+      const mark = motionMarks(target).find((item) => item.id === d.markId);
+      if (!target || !mark) return;
+      const heading = Math.round(headingOf(w.x - mark.x, w.y - mark.y));
+      d.changed = true;
+      setObjects((previousObjects) =>
+        previousObjects.map((object) => {
+          if (object.id !== d.id) return object;
+          const motionPath = motionMarks(object).map((item) => (item.id === d.markId ? { ...item, rot: heading } : item));
+          const start = motionPath[0];
+          return { ...object, motionPath, rot: start.rot };
+        })
+      );
       return;
     }
     const o = byId[d.id];
@@ -1299,6 +1818,7 @@ export default function BlockingBoard() {
     const hits = stencils.filter(
       (s) =>
         stencilIsAvailableInMode(s, layerMode) &&
+        stencilMatchesPalette(s, stencilFocus) &&
         (!q ||
           s.name.toLowerCase().includes(q) ||
           s.category.toLowerCase().includes(q) ||
@@ -1309,8 +1829,21 @@ export default function BlockingBoard() {
       if (!map.has(s.category)) map.set(s.category, []);
       map.get(s.category).push(s);
     });
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [layerMode, stencils, stencilQuery]);
+    const categoryRank = layerMode === CINEMATOGRAPHY
+      ? ["Cameras", "Camera rigs", "LED Fixtures", "HMI Fixtures", "Fluorescent Fixtures", "Tungsten & Practicals", "Lighting", "Frames & Boards", "Rags", "Rolls & Cards", "Support & Rigging", "Grip", "Rigging", "Movement"]
+      : ["Architecture", "Rooms & Spaces", "Furniture", "Fixtures", "Exterior", "Vehicles", "Misc", "Labels"];
+    return [...map.entries()].sort((a, b) => {
+      const rankA = categoryRank.indexOf(a[0]);
+      const rankB = categoryRank.indexOf(b[0]);
+      return (rankA < 0 ? 999 : rankA) - (rankB < 0 ? 999 : rankB) || a[0].localeCompare(b[0]);
+    });
+  }, [layerMode, stencilFocus, stencils, stencilQuery]);
+
+  const activePaletteTabs = PALETTE_TABS[layerMode];
+  const availableStencilCount = useMemo(
+    () => stencils.filter((stencil) => stencilIsAvailableInMode(stencil, layerMode)).length,
+    [layerMode, stencils]
+  );
 
   /* ---- import and export ---- */
 
@@ -1329,25 +1862,58 @@ export default function BlockingBoard() {
   const plannedMinutes = shots.reduce((n, s) => n + (Number(s.cam.est) || 0), 0);
   const hasPlannedMinutes = shots.some((s) => s.cam.est !== "" && s.cam.est != null && Number(s.cam.est) >= 0);
 
+  const sceneDocument = useCallback(
+    () => ({
+      schemaVersion: LAYER_SCHEMA_VERSION,
+      layerSettings: { cinematographyDisplay },
+      objects,
+      walls,
+      openings,
+      line,
+      meta,
+      blueprint,
+    }),
+    [blueprint, cinematographyDisplay, line, meta, objects, openings, walls]
+  );
+
   const exportScene = () =>
     download(
-      "scene.json",
-      JSON.stringify(
-        {
-          schemaVersion: LAYER_SCHEMA_VERSION,
-          layerSettings: { cinematographyDisplay },
-          objects,
-          walls,
-          openings,
-          line,
-          meta,
-          blueprint,
-        },
-        null,
-        2
-      ),
+      `shot-planner-sc${meta.scene || "scene"}.json`,
+      JSON.stringify(sceneDocument(), null, 2),
       "application/json"
     );
+
+  const openShareDialog = () => {
+    const url = buildSceneShareUrl(window.location.href, sceneDocument());
+    setShareDialog({
+      url,
+      tooLong: url.length > MAX_SHARE_URL_LENGTH,
+      copied: false,
+      error: "",
+    });
+  };
+
+  const copyShareLink = async () => {
+    if (!shareDialog?.url || shareDialog.tooLong) return;
+    try {
+      await navigator.clipboard.writeText(shareDialog.url);
+      setShareDialog((current) => ({ ...current, copied: true, error: "" }));
+    } catch {
+      const input = document.createElement("textarea");
+      input.value = shareDialog.url;
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.select();
+      const copied = document.execCommand("copy");
+      input.remove();
+      setShareDialog((current) => ({
+        ...current,
+        copied,
+        error: copied ? "" : "Copy was blocked. Select and copy the link manually.",
+      }));
+    }
+  };
 
   const exportShotList = () => {
     const head = [
@@ -1513,25 +2079,44 @@ ${previs}
     }
   };
 
+  const loadSceneDocument = useCallback(
+    (raw, { recordHistory = false } = {}) => {
+      const data = migrateSceneDocument(raw);
+      if (recordHistory) recordUndo("open-scene");
+      setObjects(data.objects);
+      setWalls(Array.isArray(data.walls) ? data.walls : []);
+      setOpenings(Array.isArray(data.openings) ? data.openings : []);
+      setLine(data.line || { on: true, auto: true, a: null, b: null, side: 1 });
+      if (data.meta) setMeta((current) => ({ ...current, ...data.meta }));
+      setBlueprint(data.blueprint || null);
+      setCinematographyDisplay(data.layerSettings.cinematographyDisplay);
+      setLayerMode(DIRECTOR);
+      setStencilFocus("director-all");
+      setSelected(null);
+      setSelectedWall(null);
+      setSelectedOpening(null);
+    },
+    [recordUndo]
+  );
+
+  useEffect(() => {
+    if (sharedSceneLoadedRef.current || typeof window === "undefined") return;
+    sharedSceneLoadedRef.current = true;
+    try {
+      const sharedScene = sceneFromShareHash(window.location.hash);
+      if (sharedScene) loadSceneDocument(sharedScene);
+    } catch (error) {
+      console.error("Could not open the shared scene", error);
+    }
+  }, [loadSceneDocument]);
+
   const importScene = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const r = new FileReader();
     r.onload = () => {
       try {
-        const data = migrateSceneDocument(JSON.parse(r.result));
-        recordUndo("open-scene");
-        setObjects(data.objects);
-        setWalls(Array.isArray(data.walls) ? data.walls : []);
-        setOpenings(Array.isArray(data.openings) ? data.openings : []);
-        setLine(data.line || { on: true, auto: true, a: null, b: null, side: 1 });
-        if (data.meta) setMeta((m) => ({ ...m, ...data.meta }));
-        setBlueprint(data.blueprint || null);
-        setCinematographyDisplay(data.layerSettings.cinematographyDisplay);
-        setLayerMode(DIRECTOR);
-        setSelected(null);
-        setSelectedWall(null);
-        setSelectedOpening(null);
+        loadSceneDocument(JSON.parse(r.result), { recordHistory: true });
       } catch (err) {
         console.error("Could not read that file", err);
       }
@@ -1597,12 +2182,12 @@ ${previs}
         </Btn>
         <Btn onClick={() => setPane("stencils")}>Set pieces</Btn>
         <Btn
-          onClick={() => setLayerMode((current) => (current === DIRECTOR ? CINEMATOGRAPHY : DIRECTOR))}
+          onClick={() => switchLayerWorkspace(layerMode === DIRECTOR ? CINEMATOGRAPHY : DIRECTOR)}
           active={layerMode === CINEMATOGRAPHY}
           data-testid="button-cinematography-mode"
           aria-pressed={layerMode === CINEMATOGRAPHY}
         >
-          Cinematography: {layerMode === CINEMATOGRAPHY ? "ON" : "OFF"}
+          Workspace: {layerMode === CINEMATOGRAPHY ? "Cinematographer" : "Director"}
         </Btn>
         <Btn
           onClick={() => setCinematographyDisplay((current) => (current === "hide" ? "ghost" : "hide"))}
@@ -1659,8 +2244,9 @@ ${previs}
             </label>
             <Btn onClick={printShotList} accent>Print / save PDF</Btn>
             <Btn onClick={exportShotList}>Export CSV</Btn>
-            <Btn onClick={exportScene}>Save scene</Btn>
-            <Btn onClick={() => fileRef.current.click()}>Open scene</Btn>
+            <Btn onClick={openShareDialog} accent data-testid="button-share-scene">Share scene</Btn>
+            <Btn onClick={exportScene}>Download scene file</Btn>
+            <Btn onClick={() => fileRef.current.click()}>Open scene file</Btn>
           </div>
         </details>
         <input ref={fileRef} type="file" accept="application/json" onChange={importScene} className="hidden" />
@@ -1677,6 +2263,8 @@ ${previs}
               cursor:
                 drag.current?.mode === "pan"
                   ? "grabbing"
+                  : pathEditCameraId || pathEditActorId
+                  ? "crosshair"
                   : wallTool === "wall"
                   ? "crosshair"
                   : ["door", "window", "opening"].includes(wallTool)
@@ -1687,6 +2275,7 @@ ${previs}
             onPointerMove={onMove}
             onPointerUp={onUp}
             onPointerLeave={onUp}
+            onContextMenu={(event) => event.preventDefault()}
           >
             <rect x="0" y="0" width="100%" height="100%" fill={C.ink} />
             <defs>
@@ -1941,6 +2530,167 @@ ${previs}
                 />
               )}
 
+              {/* camera movement: authored cubic Bézier paths sit above the set and below live camera bodies */}
+              {renderedCameras.map(({ source: camera, presentation }) => {
+                const marks = cameraMotionMarks(camera);
+                if (marks.length < 2) return null;
+                const isEditing = pathEditCameraId === camera.id;
+                const isPlaying = pathPlayback.cameraId === camera.id && pathPlayback.playing;
+                const pathColor = camera.color || C.camera;
+                return (
+                  <g
+                    key={`motion-path-${camera.id}`}
+                    data-testid={`camera-path-${camera.id}`}
+                    opacity={presentation.opacity}
+                    style={{ pointerEvents: "none" }}
+                  >
+                    <path
+                      d={motionPathSvg(marks)}
+                      fill="none"
+                      stroke={pathColor}
+                      strokeWidth={px(isEditing ? 2.4 : 1.4)}
+                      strokeDasharray={isPlaying ? undefined : `${px(5)} ${px(3)}`}
+                      opacity={isEditing ? 0.96 : 0.68}
+                    />
+                    {marks.map((mark, index) => {
+                      const markerHeading = facing(mark.rot);
+                      const isStart = index === 0;
+                      const isEnd = index === marks.length - 1;
+                      const markerColor = isStart ? C.actor : isEnd ? C.camera : pathColor;
+                      const canEdit = isEditing && presentation.interactive && !isPlaying;
+                      return (
+                        <g key={mark.id} data-testid={`camera-path-mark-${camera.id}-${mark.id}`}>
+                          <circle
+                            cx={mark.x}
+                            cy={mark.y}
+                            r={px(isStart || isEnd ? 9 : 7)}
+                            fill={C.ink}
+                            stroke={markerColor}
+                            strokeWidth={px(2)}
+                            style={{ pointerEvents: canEdit ? "auto" : "none", cursor: canEdit ? "move" : "default" }}
+                            onPointerDown={(event) => onMotionMarkDown(event, camera, mark)}
+                          />
+                          <text
+                            x={mark.x}
+                            y={mark.y + px(3.2)}
+                            textAnchor="middle"
+                            fill={C.text}
+                            fontSize={px(10)}
+                            fontWeight="700"
+                            style={{ pointerEvents: "none" }}
+                          >
+                            {index + 1}
+                          </text>
+                          {canEdit && (
+                            <>
+                              <line
+                                x1={mark.x}
+                                y1={mark.y}
+                                x2={mark.x + markerHeading.x * 1.15}
+                                y2={mark.y + markerHeading.y * 1.15}
+                                stroke={markerColor}
+                                strokeWidth={px(1.4)}
+                                style={{ pointerEvents: "none" }}
+                              />
+                              <circle
+                                cx={mark.x + markerHeading.x * 1.25}
+                                cy={mark.y + markerHeading.y * 1.25}
+                                r={px(5)}
+                                fill={markerColor}
+                                stroke={C.ink}
+                                strokeWidth={px(1.1)}
+                                style={{ pointerEvents: "auto", cursor: "crosshair" }}
+                                onPointerDown={(event) => onMotionMarkDown(event, camera, mark, "motion-mark-rotate")}
+                              />
+                            </>
+                          )}
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })}
+
+              {/* performer blocking paths use the same authored spline and mark language as camera movement */}
+              {renderedActors.map(({ source: actor, presentation }) => {
+                const marks = actorMotionMarks(actor);
+                if (marks.length < 2) return null;
+                const isEditing = pathEditActorId === actor.id;
+                const isPlaying = pathPlayback.actorId === actor.id && pathPlayback.playing;
+                return (
+                  <g
+                    key={`actor-motion-path-${actor.id}`}
+                    data-testid={`actor-path-${actor.id}`}
+                    opacity={presentation.opacity}
+                    style={{ pointerEvents: "none" }}
+                  >
+                    <path
+                      d={motionPathSvg(marks)}
+                      fill="none"
+                      stroke={C.actor}
+                      strokeWidth={px(isEditing ? 2.4 : 1.4)}
+                      strokeDasharray={isPlaying ? undefined : `${px(4)} ${px(3)}`}
+                      opacity={isEditing ? 0.98 : 0.72}
+                    />
+                    {marks.map((mark, index) => {
+                      const markerHeading = facing(mark.rot);
+                      const isStart = index === 0;
+                      const isEnd = index === marks.length - 1;
+                      const markerColor = isStart ? C.actor : isEnd ? C.select : C.actor;
+                      const canEdit = isEditing && presentation.interactive && !isPlaying;
+                      return (
+                        <g key={mark.id} data-testid={`actor-path-mark-${actor.id}-${mark.id}`}>
+                          <circle
+                            cx={mark.x}
+                            cy={mark.y}
+                            r={px(isStart || isEnd ? 9 : 7)}
+                            fill={C.ink}
+                            stroke={markerColor}
+                            strokeWidth={px(2)}
+                            style={{ pointerEvents: canEdit ? "auto" : "none", cursor: canEdit ? "move" : "default" }}
+                            onPointerDown={(event) => onMotionMarkDown(event, actor, mark)}
+                          />
+                          <text
+                            x={mark.x}
+                            y={mark.y + px(3.2)}
+                            textAnchor="middle"
+                            fill={C.text}
+                            fontSize={px(10)}
+                            fontWeight="700"
+                            style={{ pointerEvents: "none" }}
+                          >
+                            {index + 1}
+                          </text>
+                          {canEdit && (
+                            <>
+                              <line
+                                x1={mark.x}
+                                y1={mark.y}
+                                x2={mark.x + markerHeading.x * 1.15}
+                                y2={mark.y + markerHeading.y * 1.15}
+                                stroke={markerColor}
+                                strokeWidth={px(1.4)}
+                                style={{ pointerEvents: "none" }}
+                              />
+                              <circle
+                                cx={mark.x + markerHeading.x * 1.25}
+                                cy={mark.y + markerHeading.y * 1.25}
+                                r={px(5)}
+                                fill={markerColor}
+                                stroke={C.ink}
+                                strokeWidth={px(1.1)}
+                                style={{ pointerEvents: "auto", cursor: "crosshair" }}
+                                onPointerDown={(event) => onMotionMarkDown(event, actor, mark, "motion-mark-rotate")}
+                              />
+                            </>
+                          )}
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })}
+
               {/* set pieces */}
               {renderedProps.map(({ object: o, presentation }) => (
                   <g
@@ -2020,17 +2770,19 @@ ${previs}
                 ))}
 
               {/* actors */}
-              {renderedActors.map(({ object: o, presentation }) => {
+              {renderedActors.map(({ object: o, source: actor, presentation }) => {
                 const f = facing(o.rot);
                 const isLineEnd = !!linePair && (linePair[0] === o.id || linePair[1] === o.id);
                 const r = 0.95 * Math.max(0.55, Math.min(1.5, (o.height || SUBJECT_HEIGHT) / SUBJECT_HEIGHT));
+                const isPlaying = pathPlayback.actorId === actor.id && pathPlayback.playing;
                 return (
                   <g
                     key={o.id}
                     data-testid={`canvas-object-${o.id}`}
                     data-layer-context={normalizeLayerContext(o.layerContext)}
                     opacity={presentation.opacity}
-                    style={{ pointerEvents: presentation.interactive ? "auto" : "none" }}
+                    style={{ pointerEvents: presentation.interactive && !isPlaying ? "auto" : "none" }}
+                    onContextMenu={(event) => openObjectContextMenu(event, actor)}
                   >
                     {/* eyeline */}
                     <line
@@ -2062,7 +2814,7 @@ ${previs}
                       fill="rgba(79,209,197,0.18)"
                       stroke={selected === o.id ? C.select : C.actor}
                       strokeWidth={px(isLineEnd ? 3 : 2)}
-                      onPointerDown={(e) => onObjectDown(e, o, "move")}
+                      onPointerDown={(e) => onObjectDown(e, actor, "move")}
                       style={{ cursor: "move" }}
                     />
                     <polygon
@@ -2090,7 +2842,7 @@ ${previs}
                           y={o.y + f.y * 2.6}
                           px={px}
                           c={C}
-                          onDown={(e) => onObjectDown(e, o, "rotate")}
+                          onDown={(e) => onObjectDown(e, actor, "rotate")}
                         />
                         <rect
                           x={o.x + r * 0.72 - 0.3}
@@ -2100,7 +2852,7 @@ ${previs}
                           fill={C.camera}
                           stroke={C.ink}
                           strokeWidth={px(1)}
-                          onPointerDown={(e) => onObjectDown(e, o, "resize")}
+                          onPointerDown={(e) => onObjectDown(e, actor, "resize")}
                           style={{ cursor: "nwse-resize" }}
                         />
                       </>
@@ -2110,7 +2862,7 @@ ${previs}
               })}
 
               {/* cameras */}
-              {renderedCameras.map(({ object: o, presentation }) => {
+              {renderedCameras.map(({ object: o, source: camera, presentation }) => {
                 const h = headingFor(o);
                 const f = facing(h);
                 const s = SENSORS[o.sensor];
@@ -2121,13 +2873,15 @@ ${previs}
                 const bad = crossesLine(o);
                 const cameraColor = o.color || COLORS.camera;
                 const stroke = selected === o.id ? C.select : bad ? C.bad : cameraColor;
+                const isPlaying = pathPlayback.cameraId === camera.id && pathPlayback.playing;
                 return (
                   <g
                     key={o.id}
                     data-testid={`canvas-object-${o.id}`}
                     data-layer-context={normalizeLayerContext(o.layerContext)}
                     opacity={presentation.opacity}
-                    style={{ pointerEvents: presentation.interactive ? "auto" : "none" }}
+                    style={{ pointerEvents: presentation.interactive && !isPlaying ? "auto" : "none" }}
+                    onContextMenu={(event) => openObjectContextMenu(event, camera)}
                   >
                     {showCones && o.showFov !== false && (
                       <polygon
@@ -2149,7 +2903,7 @@ ${previs}
                         fill={`${cameraColor}55`}
                         stroke={stroke}
                         strokeWidth={px(1.7)}
-                        onPointerDown={(e) => onObjectDown(e, o, "move")}
+                        onPointerDown={(e) => onObjectDown(e, camera, "move")}
                         style={{ cursor: "move" }}
                       />
                       <rect
@@ -2176,12 +2930,12 @@ ${previs}
                     >
                       {o.name}
                     </text>
-                    {selected === o.id && presentation.interactive && (
+                    {selected === o.id && presentation.interactive && !isPlaying && (
                       <Handle
                         x={o.x + f.x * 2.4}
                         y={o.y + f.y * 2.4}
                         px={px}
-                        onDown={(e) => onObjectDown(e, o, "rotate")}
+                        onDown={(e) => onObjectDown(e, camera, "rotate")}
                       />
                     )}
                   </g>
@@ -2319,16 +3073,69 @@ ${previs}
 
             {pane === "stencils" && (
               <div className="space-y-3">
+                <div
+                  className="rounded-md p-3"
+                  style={{
+                    background: layerMode === CINEMATOGRAPHY ? "rgba(79,209,197,0.09)" : "rgba(232,163,61,0.09)",
+                    border: `1px solid ${layerMode === CINEMATOGRAPHY ? COLORS.actor : COLORS.camera}`,
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: layerMode === CINEMATOGRAPHY ? COLORS.actor : COLORS.camera }}>
+                        {layerMode === CINEMATOGRAPHY ? "Cinematographer toolkit" : "Director toolkit"}
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed" style={{ color: COLORS.text }}>
+                        {layerMode === CINEMATOGRAPHY
+                          ? "Technical tools are expanded by discipline. Staging assets remain one focused tab away."
+                          : "Only blocking and staging essentials are shown. Camera, lighting, grip, and rigging stay out of your pass."}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded px-2 py-1 text-xs font-mono" style={{ color: COLORS.text, background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}>
+                      {availableStencilCount}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1" role="tablist" aria-label="Stencil role filters">
+                  {activePaletteTabs.map((tab) => {
+                    const count = stencils.filter(
+                      (stencil) => stencilIsAvailableInMode(stencil, layerMode) && stencilMatchesPalette(stencil, tab.id)
+                    ).length;
+                    const active = stencilFocus === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        title={tab.description}
+                        onClick={() => setStencilFocus(tab.id)}
+                        data-testid={`button-stencil-filter-${tab.id}`}
+                        className="min-h-10 rounded px-2 py-1 text-left text-xs font-medium"
+                        style={{
+                          background: active ? (layerMode === CINEMATOGRAPHY ? "rgba(79,209,197,0.16)" : "rgba(232,163,61,0.16)") : COLORS.panelHi,
+                          color: active ? (layerMode === CINEMATOGRAPHY ? COLORS.actor : COLORS.camera) : COLORS.text,
+                          border: `1px solid ${active ? (layerMode === CINEMATOGRAPHY ? COLORS.actor : COLORS.camera) : COLORS.rule}`,
+                        }}
+                      >
+                        <span>{tab.label}</span>
+                        <span className="ml-1 font-mono" style={{ color: COLORS.dim }}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <input
                   value={stencilQuery}
                   onChange={(e) => setStencilQuery(e.target.value)}
-                  placeholder="Search stencils"
+                  placeholder={layerMode === CINEMATOGRAPHY ? "Search camera, light, grip, or rigging" : "Search set, furniture, or architecture"}
                   className="w-full px-2 py-1 rounded text-sm"
                   style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
                 />
                 <div className="flex gap-2">
-                  <Btn onClick={() => pngRef.current.click()}>Import PNGs</Btn>
-                  <Btn onClick={addProp}>Blank footprint</Btn>
+                  <Btn onClick={() => pngRef.current.click()}>Import role assets</Btn>
+                  <Btn onClick={addProp}>{layerMode === CINEMATOGRAPHY ? "Technical mark" : "Blank footprint"}</Btn>
                 </div>
                 <input
                   ref={pngRef}
@@ -2343,8 +3150,8 @@ ${previs}
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: layerMode === CINEMATOGRAPHY ? COLORS.actor : COLORS.dim }}>
                   {layerMode === CINEMATOGRAPHY
-                    ? "Cinematography mode exposes blocking, camera, lighting, grip, movement, and rigging stencils."
-                    : "Director mode shows staging essentials. Turn Cinematography on to add lighting, grip, movement, and rigging stencils."}
+                    ? "Camera bodies, fixtures, light control, grip, and rigging are editable here. Use Set & staging for the shared floor plan."
+                    : "Actors, architecture, furniture, practical set pieces, and location markers stay editable. Switch Workspace to Cinematographer for technical gear."}
                 </p>
 
                 {stencilGroups.length === 0 && (
@@ -2356,7 +3163,7 @@ ${previs}
                 {stencilGroups.map(([category, items]) => (
                   <div key={category}>
                     <div className="text-xs uppercase tracking-widest mb-1" style={{ color: COLORS.dim }}>
-                      {category}
+                      {category} <span className="font-mono normal-case tracking-normal">· {items.length}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {items.map((st) => (
@@ -2869,6 +3676,21 @@ ${previs}
                         ))}
                       </select>
                     </Field>
+                    <Field label="Previs format">
+                      <select
+                        value={sel.previsAspect || "2.39"}
+                        onChange={(e) => patch(sel.id, { previsAspect: e.target.value })}
+                        data-testid="select-previs-aspect"
+                        className="w-full px-2 py-1 rounded text-sm"
+                        style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                      >
+                        {PREVIS_ASPECT_RATIOS.map((format) => (
+                          <option key={format.id} value={format.id}>
+                            {format.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
                     <div className="grid grid-cols-2 gap-2">
                       <Field label="Shot color">
                         <input
@@ -2914,6 +3736,142 @@ ${previs}
                         ))}
                       </select>
                     </Field>
+                    <details
+                      open={pathEditCameraId === sel.id}
+                      className="rounded overflow-hidden"
+                      style={{ border: `1px solid ${COLORS.rule}`, background: "rgba(8,13,18,0.28)" }}
+                    >
+                      <summary
+                        className="cursor-pointer px-2.5 py-2 text-xs font-semibold flex items-center justify-between"
+                        style={{ color: COLORS.text }}
+                      >
+                        <span>Camera movement path</span>
+                        <span style={{ color: COLORS.camera }}>
+                          {cameraMotionMarks(sel).length ? `${cameraMotionMarks(sel).length} marks · ${cameraMotionDuration(sel).toFixed(1)}s` : "No marks"}
+                        </span>
+                      </summary>
+                      <div className="px-2.5 pb-2.5 space-y-2.5">
+                        <p className="text-[11px] leading-4" style={{ color: COLORS.dim }}>
+                          Mark 1 anchors the camera. Add or drag later marks to shape a smooth curve. Use the small direction handle at a mark to pan independently.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Btn
+                            onClick={() => {
+                              if (!cameraMotionMarks(sel).length) startCameraPath(sel.id);
+                              else setPathEditCameraId((current) => (current === sel.id ? null : sel.id));
+                            }}
+                            data-testid="button-edit-camera-path"
+                            accent={pathEditCameraId === sel.id}
+                          >
+                            {!cameraMotionMarks(sel).length ? "Start marks" : pathEditCameraId === sel.id ? "Finish marks" : "Edit marks"}
+                          </Btn>
+                          <Btn
+                            onClick={() => addCameraMark(sel.id)}
+                            disabled={!cameraMotionMarks(sel).length}
+                            data-testid="button-add-camera-mark"
+                          >
+                            Add mark
+                          </Btn>
+                        </div>
+                        {cameraMotionMarks(sel).length > 1 && (
+                          <>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Btn
+                                onClick={() => (pathPlayback.cameraId === sel.id && pathPlayback.playing ? stopCameraPath() : playCameraPath(sel.id))}
+                                data-testid="button-play-camera-path"
+                                accent
+                              >
+                                {pathPlayback.cameraId === sel.id && pathPlayback.playing ? "Pause path" : "Preview path"}
+                              </Btn>
+                              <Btn
+                                onClick={() => {
+                                  playbackStartedAtRef.current = null;
+                                  setPathPlayback({ cameraId: sel.id, progress: 0, playing: false });
+                                }}
+                                data-testid="button-reset-camera-path-preview"
+                              >
+                                Reset preview
+                              </Btn>
+                            </div>
+                            <label className="block text-[11px]" style={{ color: COLORS.dim }}>
+                              Path preview {Math.round((pathPlayback.cameraId === sel.id ? pathPlayback.progress : 0) * 100)}%
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.001"
+                                value={pathPlayback.cameraId === sel.id ? pathPlayback.progress : 0}
+                                onChange={(event) => {
+                                  playbackStartedAtRef.current = null;
+                                  setPathPlayback({ cameraId: sel.id, progress: +event.target.value, playing: false });
+                                }}
+                                className="w-full mt-1"
+                                data-testid="input-camera-path-scrubber"
+                              />
+                            </label>
+                          </>
+                        )}
+                        {pathEditCameraId === sel.id && (
+                          <div className="rounded px-2 py-1.5 text-[11px]" style={{ color: COLORS.camera, background: "rgba(232,163,61,0.1)" }}>
+                            Canvas edit is active. Click an open spot in the floor plan to place the next numbered mark.
+                          </div>
+                        )}
+                        {cameraMotionMarks(sel).map((mark, index) => (
+                          <div
+                            key={mark.id}
+                            className="rounded p-2 space-y-1.5"
+                            style={{ background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}
+                            data-testid={`camera-mark-editor-${index + 1}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold" style={{ color: index === 0 ? COLORS.actor : COLORS.camera }}>
+                                Mark {index + 1}{index === 0 ? " · start" : index === cameraMotionMarks(sel).length - 1 ? " · stop" : ""}
+                              </span>
+                              {index > 0 && (
+                                <button
+                                  className="text-[11px] underline"
+                                  style={{ color: COLORS.bad }}
+                                  onClick={() => removeCameraMark(sel.id, mark.id)}
+                                  data-testid={`button-remove-camera-mark-${index + 1}`}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              <Field label="X">
+                                <Num value={mark.x} step={0.5} onChange={(value) => updateCameraMark(sel.id, mark.id, { x: value })} />
+                              </Field>
+                              <Field label="Y">
+                                <Num value={mark.y} step={0.5} onChange={(value) => updateCameraMark(sel.id, mark.id, { y: value })} />
+                              </Field>
+                              <Field label="Pan°">
+                                <Num value={Math.round(mark.rot)} step={1} onChange={(value) => updateCameraMark(sel.id, mark.id, { rot: value })} />
+                              </Field>
+                            </div>
+                            {index > 0 && (
+                              <Field label="Travel from previous mark (seconds)">
+                                <input
+                                  type="number"
+                                  min="0.1"
+                                  step="0.1"
+                                  value={mark.duration ?? 1.5}
+                                  onChange={(event) => updateCameraMark(sel.id, mark.id, { duration: Math.max(0.1, +event.target.value || 0.1) })}
+                                  className="w-full px-2 py-1 rounded text-sm font-mono"
+                                  style={{ background: C.ink, color: C.text, border: `1px solid ${C.rule}` }}
+                                  data-testid={`input-camera-mark-duration-${index + 1}`}
+                                />
+                              </Field>
+                            )}
+                          </div>
+                        ))}
+                        {cameraMotionMarks(sel).length > 0 && (
+                          <Btn onClick={() => clearCameraPath(sel.id)} data-testid="button-clear-camera-path">
+                            Clear movement path
+                          </Btn>
+                        )}
+                      </div>
+                    </details>
                     <div className="grid grid-cols-2 gap-2">
                       <Field label="Support">
                         <Sel
@@ -2946,7 +3904,7 @@ ${previs}
                       />
                       Second camera on the previous setup
                     </label>
-                    <Field label="Locked to actor">
+                    <Field label="Track To actor">
                       <select
                         value={sel.linkTo || ""}
                         onChange={(e) => patch(sel.id, { linkTo: e.target.value || null })}
@@ -2968,7 +3926,7 @@ ${previs}
                         disabled={!sel.linkTo}
                         onChange={(e) => patch(sel.id, { aim: e.target.checked })}
                       />
-                      Keep pointed at that actor
+                      Track To keeps this camera aimed at the actor through every mark
                     </label>
                     <Field label="Notes">
                       <textarea
@@ -3015,12 +3973,223 @@ ${previs}
 
                 {sel.type === "actor" && (
                   <>
-                    <Field label="Previs character">
-                      <Sel
-                        value={sel.gender || "female"}
-                        options={["female", "male"]}
-                        onChange={(v) => patch(sel.id, { gender: v })}
-                      />
+                    <details
+                      open={pathEditActorId === sel.id}
+                      className="rounded overflow-hidden"
+                      style={{ border: `1px solid ${COLORS.rule}`, background: "rgba(8,13,18,0.28)" }}
+                    >
+                      <summary
+                        className="cursor-pointer px-2.5 py-2 text-xs font-semibold flex items-center justify-between"
+                        style={{ color: COLORS.text }}
+                      >
+                        <span>Performer blocking path</span>
+                        <span style={{ color: COLORS.actor }}>
+                          {actorMotionMarks(sel).length ? `${actorMotionMarks(sel).length} marks · ${actorMotionDuration(sel).toFixed(1)}s` : "No marks"}
+                        </span>
+                      </summary>
+                      <div className="px-2.5 pb-2.5 space-y-2.5">
+                        <p className="text-[11px] leading-4" style={{ color: COLORS.dim }}>
+                          Mark 1 is the performer’s start. Add stops to block entrances, crosses, and turns. Each mark holds position, facing, and travel time.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Btn
+                            onClick={() => {
+                              if (!actorMotionMarks(sel).length) startActorPath(sel.id);
+                              else {
+                                setPathEditCameraId(null);
+                                setPathEditActorId((current) => (current === sel.id ? null : sel.id));
+                              }
+                            }}
+                            data-testid="button-edit-actor-path"
+                            accent={pathEditActorId === sel.id}
+                          >
+                            {!actorMotionMarks(sel).length ? "Start marks" : pathEditActorId === sel.id ? "Finish marks" : "Edit marks"}
+                          </Btn>
+                          <Btn
+                            onClick={() => addActorMark(sel.id)}
+                            disabled={!actorMotionMarks(sel).length}
+                            data-testid="button-add-actor-mark"
+                          >
+                            Add mark
+                          </Btn>
+                        </div>
+                        {actorMotionMarks(sel).length > 1 && (
+                          <>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Btn
+                                onClick={() => (pathPlayback.actorId === sel.id && pathPlayback.playing ? stopCameraPath() : playActorPath(sel.id))}
+                                data-testid="button-play-actor-path"
+                                accent
+                              >
+                                {pathPlayback.actorId === sel.id && pathPlayback.playing ? "Pause blocking" : "Preview blocking"}
+                              </Btn>
+                              <Btn
+                                onClick={() => {
+                                  playbackStartedAtRef.current = null;
+                                  setPathPlayback({ cameraId: null, actorId: sel.id, progress: 0, playing: false });
+                                }}
+                                data-testid="button-reset-actor-path-preview"
+                              >
+                                Reset preview
+                              </Btn>
+                            </div>
+                            <label className="block text-[11px]" style={{ color: COLORS.dim }}>
+                              Blocking preview {Math.round((pathPlayback.actorId === sel.id ? pathPlayback.progress : 0) * 100)}%
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.001"
+                                value={pathPlayback.actorId === sel.id ? pathPlayback.progress : 0}
+                                onChange={(event) => {
+                                  playbackStartedAtRef.current = null;
+                                  setPathPlayback({ cameraId: null, actorId: sel.id, progress: +event.target.value, playing: false });
+                                }}
+                                className="w-full mt-1"
+                                data-testid="input-actor-path-scrubber"
+                              />
+                            </label>
+                          </>
+                        )}
+                        {pathEditActorId === sel.id && (
+                          <div className="rounded px-2 py-1.5 text-[11px]" style={{ color: COLORS.actor, background: "rgba(79,209,197,0.1)" }}>
+                            Canvas edit is active. Click an open spot in the floor plan to place the next numbered blocking mark.
+                          </div>
+                        )}
+                        {actorMotionMarks(sel).map((mark, index) => (
+                          <div
+                            key={mark.id}
+                            className="rounded p-2 space-y-1.5"
+                            style={{ background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}
+                            data-testid={`actor-mark-editor-${index + 1}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold" style={{ color: index === 0 ? COLORS.actor : COLORS.select }}>
+                                Mark {index + 1}{index === 0 ? " · start" : index === actorMotionMarks(sel).length - 1 ? " · stop" : ""}
+                              </span>
+                              {index > 0 && (
+                                <button
+                                  className="text-[11px] underline"
+                                  style={{ color: COLORS.bad }}
+                                  onClick={() => removeActorMark(sel.id, mark.id)}
+                                  data-testid={`button-remove-actor-mark-${index + 1}`}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              <Field label="X">
+                                <Num value={mark.x} step={0.5} onChange={(value) => updateActorMark(sel.id, mark.id, { x: value })} />
+                              </Field>
+                              <Field label="Y">
+                                <Num value={mark.y} step={0.5} onChange={(value) => updateActorMark(sel.id, mark.id, { y: value })} />
+                              </Field>
+                              <Field label="Face°">
+                                <Num value={Math.round(mark.rot)} step={1} onChange={(value) => updateActorMark(sel.id, mark.id, { rot: value })} />
+                              </Field>
+                            </div>
+                            {index > 0 && (
+                              <Field label="Travel from previous mark (seconds)">
+                                <input
+                                  type="number"
+                                  min="0.1"
+                                  step="0.1"
+                                  value={mark.duration ?? 1.5}
+                                  onChange={(event) => updateActorMark(sel.id, mark.id, { duration: Math.max(0.1, +event.target.value || 0.1) })}
+                                  className="w-full px-2 py-1 rounded text-sm font-mono"
+                                  style={{ background: C.ink, color: C.text, border: `1px solid ${C.rule}` }}
+                                  data-testid={`input-actor-mark-duration-${index + 1}`}
+                                />
+                              </Field>
+                            )}
+                          </div>
+                        ))}
+                        {actorMotionMarks(sel).length > 0 && (
+                          <Btn onClick={() => clearActorPath(sel.id)} data-testid="button-clear-actor-path">
+                            Clear blocking path
+                          </Btn>
+                        )}
+                      </div>
+                    </details>
+                    <Field label="Stock cast profile">
+                      <select
+                        value={sel.previsCharacter || (sel.gender === "male" ? "marcus" : "maya")}
+                        onChange={(e) => patch(sel.id, profilePatch(e.target.value))}
+                        data-testid="select-previs-character"
+                        className="w-full px-2 py-1 rounded text-sm"
+                        style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                      >
+                        <optgroup label="Male cast">
+                          {PREVIS_CAST.filter((person) => person.gender === "male").map((person) => (
+                            <option key={person.id} value={person.id}>{person.label}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Female cast">
+                          {PREVIS_CAST.filter((person) => person.gender === "female").map((person) => (
+                            <option key={person.id} value={person.id}>{person.label}</option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </Field>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Wardrobe">
+                        <select
+                          value={sel.previsWardrobe || "casual"}
+                          onChange={(e) => patch(sel.id, { previsWardrobe: e.target.value })}
+                          data-testid="select-previs-wardrobe"
+                          className="w-full px-2 py-1 rounded text-sm"
+                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                        >
+                          {PREVIS_WARDROBES.map((wardrobe) => <option key={wardrobe.id} value={wardrobe.id}>{wardrobe.label}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Build">
+                        <select
+                          value={sel.previsBuild || "average"}
+                          onChange={(e) => patch(sel.id, { previsBuild: e.target.value })}
+                          data-testid="select-previs-build"
+                          className="w-full px-2 py-1 rounded text-sm"
+                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                        >
+                          <option value="lean">Lean</option>
+                          <option value="average">Average</option>
+                          <option value="broad">Broad</option>
+                        </select>
+                      </Field>
+                      <Field label="Skin tone">
+                        <select
+                          value={sel.previsSkinTone || "warm"}
+                          onChange={(e) => patch(sel.id, { previsSkinTone: e.target.value })}
+                          data-testid="select-previs-skin-tone"
+                          className="w-full px-2 py-1 rounded text-sm"
+                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                        >
+                          {PREVIS_SKIN_TONES.map((tone) => <option key={tone.id} value={tone.id}>{tone.label}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Hair color">
+                        <select
+                          value={sel.previsHairColor || "brown"}
+                          onChange={(e) => patch(sel.id, { previsHairColor: e.target.value })}
+                          data-testid="select-previs-hair-color"
+                          className="w-full px-2 py-1 rounded text-sm"
+                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                        >
+                          {PREVIS_HAIR_COLORS.map((color) => <option key={color.id} value={color.id}>{color.label}</option>)}
+                        </select>
+                      </Field>
+                    </div>
+                    <Field label="Hair style">
+                      <select
+                        value={sel.previsHairStyle || "wave"}
+                        onChange={(e) => patch(sel.id, { previsHairStyle: e.target.value })}
+                        data-testid="select-previs-hair-style"
+                        className="w-full px-2 py-1 rounded text-sm"
+                        style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                      >
+                        {PREVIS_HAIR_STYLES.map((style) => <option key={style.id} value={style.id}>{style.label}</option>)}
+                      </select>
                     </Field>
                     <Field label={`Subject height ${(sel.height || SUBJECT_HEIGHT).toFixed(1)} ft`}>
                       <input
@@ -3057,14 +4226,290 @@ ${previs}
           </div>
         </aside>
       </div>
+      {contextMenu && byId[contextMenu.id] && (
+        <div
+          role="menu"
+          aria-label={`${byId[contextMenu.id].type === "camera" ? "Camera" : "Performer"} controls`}
+          data-testid={`context-menu-${byId[contextMenu.id].type}`}
+          className="fixed z-[70] w-56 overflow-hidden rounded-lg p-1.5 shadow-2xl"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+            background: COLORS.panel,
+            border: `1px solid ${COLORS.rule}`,
+            boxShadow: "0 18px 54px rgba(0,0,0,0.48)",
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          {(() => {
+            const target = byId[contextMenu.id];
+            const isCamera = target.type === "camera";
+            const actionClass = "w-full rounded px-2.5 py-2 text-left text-xs font-medium transition";
+            const actionStyle = { color: COLORS.text, background: "transparent" };
+            const close = () => setContextMenu(null);
+            return (
+              <>
+                <div className="px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: isCamera ? COLORS.camera : COLORS.actor }}>
+                  {isCamera ? "Camera controls" : "Performer controls"} · {target.name}
+                </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={actionClass}
+                  style={actionStyle}
+                  onClick={() => {
+                    setSelected(target.id);
+                    setPane("object");
+                    close();
+                  }}
+                  data-testid="menu-open-inspector"
+                >
+                  Open inspector
+                </button>
+                {isCamera ? (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      onClick={() => {
+                        if (!cameraMotionMarks(target).length) startCameraPath(target.id);
+                        else {
+                          setPathEditActorId(null);
+                          setPathEditCameraId(target.id);
+                        }
+                        close();
+                      }}
+                      data-testid="menu-edit-camera-path"
+                    >
+                      {!cameraMotionMarks(target).length ? "Start camera marks" : "Edit camera marks"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      disabled={!cameraMotionMarks(target).length}
+                      onClick={() => {
+                        addCameraMark(target.id);
+                        close();
+                      }}
+                      data-testid="menu-add-camera-mark"
+                    >
+                      Add next camera mark
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      disabled={cameraMotionMarks(target).length < 2}
+                      onClick={() => {
+                        playCameraPath(target.id);
+                        close();
+                      }}
+                      data-testid="menu-preview-camera-path"
+                    >
+                      Preview camera path
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      disabled={!target.linkTo}
+                      onClick={() => {
+                        patch(target.id, { aim: !target.aim });
+                        close();
+                      }}
+                      data-testid="menu-toggle-track-to"
+                    >
+                      {target.aim ? "Disable Track To" : "Enable Track To"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={{ ...actionStyle, color: COLORS.camera }}
+                      onClick={() => {
+                        const shot = shots.find((item) => item.cam.id === target.id);
+                        if (shot) setPreviewShot(shot);
+                        close();
+                      }}
+                      data-testid="menu-open-camera-previs"
+                    >
+                      Open 3D previs
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      onClick={() => {
+                        if (!actorMotionMarks(target).length) startActorPath(target.id);
+                        else {
+                          setPathEditCameraId(null);
+                          setPathEditActorId(target.id);
+                        }
+                        close();
+                      }}
+                      data-testid="menu-edit-actor-path"
+                    >
+                      {!actorMotionMarks(target).length ? "Start blocking marks" : "Edit blocking marks"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      disabled={!actorMotionMarks(target).length}
+                      onClick={() => {
+                        addActorMark(target.id);
+                        close();
+                      }}
+                      data-testid="menu-add-actor-mark"
+                    >
+                      Add next blocking mark
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      disabled={actorMotionMarks(target).length < 2}
+                      onClick={() => {
+                        playActorPath(target.id);
+                        close();
+                      }}
+                      data-testid="menu-preview-actor-path"
+                    >
+                      Preview blocking path
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={actionStyle}
+                      onClick={() => {
+                        faceNearestCamera(target.id);
+                        close();
+                      }}
+                      data-testid="menu-face-nearest-camera"
+                    >
+                      Face nearest camera
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={actionClass}
+                      style={{ ...actionStyle, color: COLORS.camera }}
+                      disabled={!cameras.length}
+                      onClick={() => {
+                        setCameraTrackTarget(target.id);
+                        close();
+                      }}
+                      data-testid="menu-set-track-target"
+                    >
+                      Make nearest camera Track To
+                    </button>
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
       {previewShot && (
         <PrevisWindow
           shot={previewShot}
           objects={objects}
           walls={walls}
           openings={openings}
+          onUpdateCamera={(cameraId, fields) => patch(cameraId, fields)}
           onClose={() => setPreviewShot(null)}
         />
+      )}
+      {shareDialog && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Save and share scene"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(4, 8, 12, 0.8)", backdropFilter: "blur(6px)" }}
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setShareDialog(null);
+          }}
+        >
+          <section className="w-full max-w-xl rounded-lg p-5 shadow-2xl" style={{ background: COLORS.panel, border: `1px solid ${COLORS.rule}` }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em]" style={{ color: COLORS.actor }}>Portable scene save</p>
+                <h2 className="mt-1 text-lg font-semibold" style={{ color: COLORS.text }}>Share an editable Shot Planner scene</h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Close scene sharing"
+                onClick={() => setShareDialog(null)}
+                className="min-h-10 rounded px-3 text-sm"
+                style={{ color: COLORS.text, background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}
+              >
+                Close
+              </button>
+            </div>
+
+            {shareDialog.tooLong ? (
+              <div className="mt-5 rounded p-4 text-sm leading-relaxed" style={{ background: "rgba(232,163,61,0.1)", color: COLORS.text, border: `1px solid ${COLORS.camera}` }}>
+                This scene is too large for a dependable browser link. Download the complete scene file instead, then send that file through your team’s preferred channel. It will restore the full editable scene, including any blueprint underlay.
+              </div>
+            ) : (
+              <>
+                <p className="mt-5 text-sm leading-relaxed" style={{ color: COLORS.dim }}>
+                  Copy this self-contained link to open the current editable scene on another browser or send it to a collaborator. Anyone with the link can view and edit it. Blueprint image underlays are excluded from links to keep them portable, but stay in the full scene file.
+                </p>
+                <textarea
+                  readOnly
+                  value={shareDialog.url}
+                  aria-label="Portable scene share link"
+                  onFocus={(event) => event.currentTarget.select()}
+                  className="mt-4 h-28 w-full resize-none rounded p-3 text-xs font-mono"
+                  style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                  data-testid="input-scene-share-link"
+                />
+                {shareDialog.error && (
+                  <p className="mt-2 text-xs" style={{ color: COLORS.bad }}>{shareDialog.error}</p>
+                )}
+              </>
+            )}
+
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              {!shareDialog.tooLong && (
+                <button
+                  type="button"
+                  onClick={copyShareLink}
+                  className="min-h-11 rounded text-sm font-medium"
+                  style={{ background: "rgba(79,209,197,0.16)", color: COLORS.actor, border: `1px solid ${COLORS.actor}` }}
+                  data-testid="button-copy-scene-share-link"
+                >
+                  {shareDialog.copied ? "Link copied" : "Copy share link"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={exportScene}
+                className="min-h-11 rounded text-sm font-medium"
+                style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
+                data-testid="button-download-scene-file"
+              >
+                Download full scene file
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );

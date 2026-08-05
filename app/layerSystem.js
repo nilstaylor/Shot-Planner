@@ -1,9 +1,57 @@
 export const DIRECTOR = "DIRECTOR";
 export const CINEMATOGRAPHY = "CINEMATOGRAPHY";
-export const LAYER_SCHEMA_VERSION = 2;
+export const LAYER_SCHEMA_VERSION = 3;
+
+const TECHNICAL_CATEGORY_FAMILIES = {
+  cameras: "CAMERA",
+  "camera rigs": "CAMERA",
+  "fluorescent fixtures": "LIGHTING",
+  "hmi fixtures": "LIGHTING",
+  "led fixtures": "LIGHTING",
+  "tungsten & practicals": "LIGHTING",
+  lighting: "LIGHTING",
+  "frames & boards": "LIGHT_CONTROL",
+  rags: "LIGHT_CONTROL",
+  "rolls & cards": "LIGHT_CONTROL",
+  grip: "GRIP_RIGGING",
+  "support & rigging": "GRIP_RIGGING",
+  rigging: "GRIP_RIGGING",
+  movement: "MOVEMENT",
+};
 
 export const normalizeLayerContext = (context) =>
   context === CINEMATOGRAPHY || context === "BOTH" ? context : DIRECTOR;
+
+const normalizedCategory = (category) => String(category || "").trim().toLowerCase();
+const hasExplicitTarget = (targetMode) => targetMode === DIRECTOR || targetMode === CINEMATOGRAPHY || targetMode === "BOTH";
+
+/* Manifests from earlier releases have no role metadata. Classify those records
+   at the asset boundary so the canvas and saved object schema stay untouched. */
+export function withStencilRole(stencil) {
+  const category = normalizedCategory(stencil.category);
+  const inferredFamily = TECHNICAL_CATEGORY_FAMILIES[category];
+  const targetMode = hasExplicitTarget(stencil.targetMode)
+    ? stencil.targetMode
+    : inferredFamily
+      ? CINEMATOGRAPHY
+      : DIRECTOR;
+  return {
+    ...stencil,
+    targetMode,
+    technicalFamily: stencil.technicalFamily || inferredFamily || "BLOCKING",
+  };
+}
+
+export function stencilPaletteGroup(stencil) {
+  const classified = withStencilRole(stencil);
+  if (classified.targetMode === DIRECTOR) return "STAGING";
+  if (classified.targetMode === "BOTH") return "SHARED";
+  if (classified.technicalFamily === "CAMERA") return "CAMERA";
+  if (classified.technicalFamily === "LIGHTING") return "LIGHTING";
+  if (classified.technicalFamily === "LIGHT_CONTROL") return "LIGHT_CONTROL";
+  if (classified.technicalFamily === "MOVEMENT") return "MOVEMENT";
+  return "GRIP_RIGGING";
+}
 
 export const withLayerDefaults = (object, layerContext = DIRECTOR) => ({
   ...object,
@@ -12,7 +60,9 @@ export const withLayerDefaults = (object, layerContext = DIRECTOR) => ({
   isLocked: !!object.isLocked,
 });
 
-/* Scene files before version 2 contain only base objects. The migration is
+/* Scene files before version 2 contain only base objects. Version 3 adds
+   optional camera motionPath records, so no destructive backfill is needed.
+   The migration is
    deliberately additive: object IDs, coordinates, rotation, and all existing
    production fields are retained exactly as saved. */
 export function migrateSceneDocument(raw) {
@@ -47,5 +97,5 @@ export function resolveLayerPresentation(object, mode, cinematographyDisplay) {
 }
 
 export function stencilIsAvailableInMode(stencil, mode) {
-  return mode === CINEMATOGRAPHY || (stencil.targetMode || DIRECTOR) !== CINEMATOGRAPHY;
+  return mode === CINEMATOGRAPHY || withStencilRole(stencil).targetMode !== CINEMATOGRAPHY;
 }

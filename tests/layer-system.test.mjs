@@ -7,7 +7,9 @@ import {
   LAYER_SCHEMA_VERSION,
   migrateSceneDocument,
   resolveLayerPresentation,
+  stencilPaletteGroup,
   stencilIsAvailableInMode,
+  withStencilRole,
 } from "../app/layerSystem.js";
 
 test("migrates a legacy scene without changing its existing object geometry", () => {
@@ -46,6 +48,24 @@ test("preserves modern layer metadata and normalizes unsupported display setting
   });
 });
 
+test("preserves optional camera and performer movement paths during schema migration", () => {
+  const motionPath = [
+    { id: "mark-1", x: 0, y: 0, rot: 0, duration: 0 },
+    { id: "mark-2", x: 8, y: -4, rot: 45, duration: 2.5 },
+  ];
+  const migrated = migrateSceneDocument({
+    schemaVersion: 2,
+    objects: [
+      { id: "cam-move", type: "camera", x: 0, y: 0, rot: 0, motionPath },
+      { id: "actor-move", type: "actor", x: 4, y: 2, rot: 180, motionPath },
+    ],
+  });
+
+  assert.deepEqual(migrated.objects[0].motionPath, motionPath);
+  assert.deepEqual(migrated.objects[1].motionPath, motionPath);
+  assert.equal(migrated.schemaVersion, LAYER_SCHEMA_VERSION);
+});
+
 test("applies hard-hide and ghost rendering without allowing inactive cinematography objects to be selected", () => {
   const cameraRig = { id: "rig-1", layerContext: CINEMATOGRAPHY, isVisible: true, isLocked: false };
 
@@ -74,4 +94,18 @@ test("keeps cinematography stencil categories out of Director mode and exposes t
   assert.equal(stencilIsAvailableInMode(technicalStencil, CINEMATOGRAPHY), true);
   assert.equal(stencilIsAvailableInMode(directorStencil, DIRECTOR), true);
   assert.equal(stencilIsAvailableInMode(directorStencil, CINEMATOGRAPHY), true);
+});
+
+test("classifies legacy manifest categories into role-aware palettes without changing declared metadata", () => {
+  const legacyLed = withStencilRole({ id: "led/aputure", name: "Aputure 600D", category: "LED Fixtures" });
+  const legacySofa = withStencilRole({ id: "furniture/sofa", name: "Sofa", category: "Furniture" });
+  const declaredShared = withStencilRole({ id: "custom/shared", category: "Misc", targetMode: "BOTH", technicalFamily: "MARKER" });
+
+  assert.deepEqual(legacyLed.targetMode, CINEMATOGRAPHY);
+  assert.deepEqual(legacyLed.technicalFamily, "LIGHTING");
+  assert.equal(stencilPaletteGroup(legacyLed), "LIGHTING");
+  assert.equal(legacySofa.targetMode, DIRECTOR);
+  assert.equal(stencilPaletteGroup(legacySofa), "STAGING");
+  assert.equal(declaredShared.targetMode, "BOTH");
+  assert.equal(declaredShared.technicalFamily, "MARKER");
 });
