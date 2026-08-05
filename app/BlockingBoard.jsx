@@ -1021,7 +1021,7 @@ export default function BlockingBoard() {
       >
         <div className="mr-3">
           <div className="text-xs font-bold tracking-widest uppercase" style={{ color: COLORS.camera }}>
-            Blocking Board
+            Shot Planner
           </div>
           <div className="text-xs" style={{ color: COLORS.dim }}>
             top down camera plan
