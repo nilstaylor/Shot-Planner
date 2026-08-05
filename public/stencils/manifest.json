@@ -1,0 +1,4632 @@
+{
+  "version": 1,
+  "units": "ft",
+  "stencils": [
+    {
+      "id": "architecture/column_1.5x1.5",
+      "name": "Column",
+      "category": "Architecture",
+      "file": "architecture/column_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "light"
+    },
+    {
+      "id": "architecture/door-swing_3x3",
+      "name": "Door swing",
+      "category": "Architecture",
+      "file": "architecture/door-swing_3x3.png",
+      "w": 3,
+      "d": 3,
+      "tint": "light"
+    },
+    {
+      "id": "architecture/double-door_6x3",
+      "name": "Double door",
+      "category": "Architecture",
+      "file": "architecture/double-door_6x3.png",
+      "w": 6,
+      "d": 3,
+      "tint": "light"
+    },
+    {
+      "id": "architecture/sliding-door_5x0.6",
+      "name": "Sliding door",
+      "category": "Architecture",
+      "file": "architecture/sliding-door_5x0.6.png",
+      "w": 5,
+      "d": 0.6,
+      "tint": "light"
+    },
+    {
+      "id": "architecture/stairs_3.5x10",
+      "name": "Stairs",
+      "category": "Architecture",
+      "file": "architecture/stairs_3.5x10.png",
+      "w": 3.5,
+      "d": 10,
+      "tint": "light"
+    },
+    {
+      "id": "architecture/wall_10x0.5",
+      "name": "Wall",
+      "category": "Architecture",
+      "file": "architecture/wall_10x0.5.png",
+      "w": 10,
+      "d": 0.5,
+      "tint": "light"
+    },
+    {
+      "id": "architecture/window_4x0.7",
+      "name": "Window",
+      "category": "Architecture",
+      "file": "architecture/window_4x0.7.png",
+      "w": 4,
+      "d": 0.7,
+      "tint": "light"
+    },
+    {
+      "id": "cameras/arri-alexa-mini",
+      "name": "Arri Alexa Mini",
+      "category": "Cameras",
+      "file": "cameras/arri-alexa-mini_1.25x2.2.png",
+      "w": 1.25,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/arri-alexa-mini-lf",
+      "name": "Arri Alexa Mini LF",
+      "category": "Cameras",
+      "file": "cameras/arri-alexa-mini-lf_1.37x2.2.png",
+      "w": 1.37,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/arri-alexa-sxt",
+      "name": "Arri Alexa SXT",
+      "category": "Cameras",
+      "file": "cameras/arri-alexa-sxt_1.14x2.2.png",
+      "w": 1.14,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/arri-amira",
+      "name": "Arri Amira",
+      "category": "Cameras",
+      "file": "cameras/arri-amira_1.08x2.2.png",
+      "w": 1.08,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/canon-5d",
+      "name": "Canon 5D",
+      "category": "Cameras",
+      "file": "cameras/canon-5d_2.2x2.02.png",
+      "w": 2.2,
+      "d": 2.02,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/canon-c100",
+      "name": "Canon C100",
+      "category": "Cameras",
+      "file": "cameras/canon-c100_1.58x2.2.png",
+      "w": 1.58,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/phantom-flex-4k",
+      "name": "Phantom Flex 4K",
+      "category": "Cameras",
+      "file": "cameras/phantom-flex-4k_0.99x2.2.png",
+      "w": 0.99,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/red-dragon",
+      "name": "RED Dragon",
+      "category": "Cameras",
+      "file": "cameras/red-dragon_1.23x2.2.png",
+      "w": 1.23,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/red-komodo",
+      "name": "RED Komodo",
+      "category": "Cameras",
+      "file": "cameras/red-komodo_1.32x2.2.png",
+      "w": 1.32,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/red-raptor",
+      "name": "RED Raptor",
+      "category": "Cameras",
+      "file": "cameras/red-raptor_1.1x2.2.png",
+      "w": 1.1,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/red-weapon",
+      "name": "RED Weapon",
+      "category": "Cameras",
+      "file": "cameras/red-weapon_1.31x2.2.png",
+      "w": 1.31,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/sony-venice",
+      "name": "Sony Venice",
+      "category": "Cameras",
+      "file": "cameras/sony-venice_1.77x2.2.png",
+      "w": 1.77,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "cameras/ursa-mini-pro",
+      "name": "Ursa Mini Pro",
+      "category": "Cameras",
+      "file": "cameras/ursa-mini-pro_1.49x2.2.png",
+      "w": 1.49,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "exterior/park-bench_5x2",
+      "name": "Park bench",
+      "category": "Exterior",
+      "file": "exterior/park-bench_5x2.png",
+      "w": 5,
+      "d": 2,
+      "tint": "light"
+    },
+    {
+      "id": "exterior/parking-space_9x18",
+      "name": "Parking space",
+      "category": "Exterior",
+      "file": "exterior/parking-space_9x18.png",
+      "w": 9,
+      "d": 18,
+      "tint": "light"
+    },
+    {
+      "id": "exterior/picnic-table_6x5.5",
+      "name": "Picnic table",
+      "category": "Exterior",
+      "file": "exterior/picnic-table_6x5.5.png",
+      "w": 6,
+      "d": 5.5,
+      "tint": "light"
+    },
+    {
+      "id": "exterior/shrub_3x3",
+      "name": "Shrub",
+      "category": "Exterior",
+      "file": "exterior/shrub_3x3.png",
+      "w": 3,
+      "d": 3,
+      "tint": "light"
+    },
+    {
+      "id": "exterior/streetlight_1.2x1.2",
+      "name": "Streetlight",
+      "category": "Exterior",
+      "file": "exterior/streetlight_1.2x1.2.png",
+      "w": 1.2,
+      "d": 1.2,
+      "tint": "light"
+    },
+    {
+      "id": "exterior/tree_10x10",
+      "name": "Tree",
+      "category": "Exterior",
+      "file": "exterior/tree_10x10.png",
+      "w": 10,
+      "d": 10,
+      "tint": "light"
+    },
+    {
+      "id": "fixtures/bathtub_5x2.5",
+      "name": "Bathtub",
+      "category": "Fixtures",
+      "file": "fixtures/bathtub_5x2.5.png",
+      "w": 5,
+      "d": 2.5,
+      "tint": "light"
+    },
+    {
+      "id": "fixtures/counter_8x2",
+      "name": "Counter",
+      "category": "Fixtures",
+      "file": "fixtures/counter_8x2.png",
+      "w": 8,
+      "d": 2,
+      "tint": "light"
+    },
+    {
+      "id": "fixtures/kitchen-island_6x3",
+      "name": "Kitchen island",
+      "category": "Fixtures",
+      "file": "fixtures/kitchen-island_6x3.png",
+      "w": 6,
+      "d": 3,
+      "tint": "light"
+    },
+    {
+      "id": "fixtures/kitchen-sink_3x2",
+      "name": "Kitchen sink",
+      "category": "Fixtures",
+      "file": "fixtures/kitchen-sink_3x2.png",
+      "w": 3,
+      "d": 2,
+      "tint": "light"
+    },
+    {
+      "id": "fixtures/refrigerator_3x2.5",
+      "name": "Refrigerator",
+      "category": "Fixtures",
+      "file": "fixtures/refrigerator_3x2.5.png",
+      "w": 3,
+      "d": 2.5,
+      "tint": "light"
+    },
+    {
+      "id": "fixtures/stove_2.5x2.2",
+      "name": "Stove",
+      "category": "Fixtures",
+      "file": "fixtures/stove_2.5x2.2.png",
+      "w": 2.5,
+      "d": 2.2,
+      "tint": "light"
+    },
+    {
+      "id": "fixtures/toilet_1.5x2.5",
+      "name": "Toilet",
+      "category": "Fixtures",
+      "file": "fixtures/toilet_1.5x2.5.png",
+      "w": 1.5,
+      "d": 2.5,
+      "tint": "light"
+    },
+    {
+      "id": "fluorescent-fixtures/diva-200-back",
+      "name": "Diva 200 Back",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/diva-200-back_2.24x4.png",
+      "w": 2.24,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/diva-200-top-long",
+      "name": "Diva 200 Top Long",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/diva-200-top-long_1.34x4.png",
+      "w": 1.34,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/diva-200-top-upright",
+      "name": "Diva 200 Top Upright",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/diva-200-top-upright_2.93x4.png",
+      "w": 2.93,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/diva-400-back",
+      "name": "Diva 400 Back",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/diva-400-back_2.96x4.png",
+      "w": 2.96,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/diva-400-top-long",
+      "name": "Diva 400 Top Long",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/diva-400-top-long_1.34x4.png",
+      "w": 1.34,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/diva-400-top-upright",
+      "name": "Diva 400 Top Upright",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/diva-400-top-upright_2.38x4.png",
+      "w": 2.38,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/gaffer-4x2-back",
+      "name": "Gaffer 4x2' Back",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/gaffer-4x2-back_3.21x4.png",
+      "w": 3.21,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/gaffer-4x4-back",
+      "name": "Gaffer 4x4' Back",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/gaffer-4x4-back_1.89x4.png",
+      "w": 1.89,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/gaffer-4x4-top-long",
+      "name": "Gaffer 4x4' Top Long",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/gaffer-4x4-top-long_0.78x4.png",
+      "w": 0.78,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/gaffer-4x4-top-upright",
+      "name": "Gaffer 4x4' Top Upright",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/gaffer-4x4-top-upright_1.97x4.png",
+      "w": 1.97,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/kino-bare-2-daylight",
+      "name": "Kino Bare 2' Daylight",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/kino-bare-2-daylight_4x0.35.png",
+      "w": 4.0,
+      "d": 0.35,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/kino-bare-2-tungsten",
+      "name": "Kino Bare 2' Tungsten",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/kino-bare-2-tungsten_4x0.35.png",
+      "w": 4.0,
+      "d": 0.35,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/kino-bare-4-daylight",
+      "name": "Kino Bare 4' Daylight",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/kino-bare-4-daylight_4x0.3.png",
+      "w": 4.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/kino-bare-4-tungsten",
+      "name": "Kino Bare 4' Tungsten",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/kino-bare-4-tungsten_4x0.3.png",
+      "w": 4.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/kino-bare-daylight-end",
+      "name": "Kino Bare Daylight End",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/kino-bare-daylight-end_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "fluorescent-fixtures/kino-bare-tungsten-end",
+      "name": "Kino Bare Tungsten End",
+      "category": "Fluorescent Fixtures",
+      "file": "fluorescent-fixtures/kino-bare-tungsten-end_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-artificial-silk",
+      "name": "18x24 Artificial Silk",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-artificial-silk_24x13.33.png",
+      "w": 24.0,
+      "d": 13.33,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-artificial-silk-angled",
+      "name": "18x24 Artificial Silk Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-artificial-silk-angled_24x10.48.png",
+      "w": 24.0,
+      "d": 10.48,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-double-black-scrim",
+      "name": "18x24 Double Black Scrim",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-double-black-scrim_24x13.3.png",
+      "w": 24.0,
+      "d": 13.3,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-double-black-scrim-angled",
+      "name": "18x24 Double Black Scrim Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-double-black-scrim-angled_24x10.48.png",
+      "w": 24.0,
+      "d": 10.48,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-single-black-scrim",
+      "name": "18x24 Single Black Scrim",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-single-black-scrim_24x13.27.png",
+      "w": 24.0,
+      "d": 13.27,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-single-black-scrim-angled",
+      "name": "18x24 Single Black Scrim Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-single-black-scrim-angled_24x10.45.png",
+      "w": 24.0,
+      "d": 10.45,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-solid",
+      "name": "18x24 Solid",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-solid_24x13.53.png",
+      "w": 24.0,
+      "d": 13.53,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-solid-angled",
+      "name": "18x24 Solid Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-solid-angled_24x10.64.png",
+      "w": 24.0,
+      "d": 10.64,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-white-silk",
+      "name": "18x24 White Silk",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-white-silk_24x13.27.png",
+      "w": 24.0,
+      "d": 13.27,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/18x24-white-silk-angled",
+      "name": "18x24 White Silk Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/18x24-white-silk-angled_24x10.48.png",
+      "w": 24.0,
+      "d": 10.48,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-artificial-silk",
+      "name": "2x3 Artificial Silk",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-artificial-silk_3x1.66.png",
+      "w": 3.0,
+      "d": 1.66,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-artificial-silk-angled",
+      "name": "2x3 Artificial Silk Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-artificial-silk-angled_3x1.31.png",
+      "w": 3.0,
+      "d": 1.31,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-double-black-scrim",
+      "name": "2x3 Double Black Scrim",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-double-black-scrim_3x1.66.png",
+      "w": 3.0,
+      "d": 1.66,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-double-black-scrim-angled",
+      "name": "2x3 Double Black Scrim Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-double-black-scrim-angled_3x1.31.png",
+      "w": 3.0,
+      "d": 1.31,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-single-black-scrim",
+      "name": "2x3 Single Black Scrim",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-single-black-scrim_3x1.66.png",
+      "w": 3.0,
+      "d": 1.66,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-single-black-scrim-angled",
+      "name": "2x3 Single Black Scrim Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-single-black-scrim-angled_3x1.31.png",
+      "w": 3.0,
+      "d": 1.31,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-solid",
+      "name": "2x3 Solid",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-solid_3x1.69.png",
+      "w": 3.0,
+      "d": 1.69,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-solid-angled",
+      "name": "2x3 Solid Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-solid-angled_3x1.34.png",
+      "w": 3.0,
+      "d": 1.34,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-white-silk",
+      "name": "2x3 White Silk",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-white-silk_3x1.66.png",
+      "w": 3.0,
+      "d": 1.66,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/2x3-white-silk-angled",
+      "name": "2x3 White Silk Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/2x3-white-silk-angled_3x1.31.png",
+      "w": 3.0,
+      "d": 1.31,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-artificial-silk",
+      "name": "4x4 Artificial Silk",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-artificial-silk_3.45x4.png",
+      "w": 3.45,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-artificial-silk-angled",
+      "name": "4x4 Artificial Silk Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-artificial-silk-angled_4x2.01.png",
+      "w": 4.0,
+      "d": 2.01,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-double-black-scrim",
+      "name": "4x4 Double Black Scrim",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-double-black-scrim_3.45x4.png",
+      "w": 3.45,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-double-black-scrim-angled",
+      "name": "4x4 Double Black Scrim Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-double-black-scrim-angled_4x2.01.png",
+      "w": 4.0,
+      "d": 2.01,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-foam-core",
+      "name": "4x4 Foam Core",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-foam-core_3.98x4.png",
+      "w": 3.98,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-foam-core-angled",
+      "name": "4x4 Foam Core Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-foam-core-angled_4x2.08.png",
+      "w": 4.0,
+      "d": 2.08,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-shiny-board-dotted",
+      "name": "4x4 Shiny Board Dotted",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-shiny-board-dotted_3.49x4.png",
+      "w": 3.49,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-shiny-board-dotted-angled",
+      "name": "4x4 Shiny Board Dotted Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-shiny-board-dotted-angled_4x2.02.png",
+      "w": 4.0,
+      "d": 2.02,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-shiny-board-smooth",
+      "name": "4x4 Shiny Board Smooth",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-shiny-board-smooth_3.49x4.png",
+      "w": 3.49,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-shiny-board-smooth-angled",
+      "name": "4x4 Shiny Board Smooth Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-shiny-board-smooth-angled_4x2.02.png",
+      "w": 4.0,
+      "d": 2.02,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-single-black-scrim",
+      "name": "4x4 Single Black Scrim",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-single-black-scrim_3.45x4.png",
+      "w": 3.45,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-single-black-scrim-angled",
+      "name": "4x4 Single Black Scrim Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-single-black-scrim-angled_4x2.02.png",
+      "w": 4.0,
+      "d": 2.02,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-solid",
+      "name": "4x4 Solid",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-solid_3.45x4.png",
+      "w": 3.45,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-solid-angled",
+      "name": "4x4 Solid Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-solid-angled_4x2.01.png",
+      "w": 4.0,
+      "d": 2.01,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-white-silk",
+      "name": "4x4 White Silk",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-white-silk_3.45x4.png",
+      "w": 3.45,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x4-white-silk-angled",
+      "name": "4x4 White Silk Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x4-white-silk-angled_4x2.02.png",
+      "w": 4.0,
+      "d": 2.02,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x8-foam-core",
+      "name": "4x8 Foam Core",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x8-foam-core_4.04x8.png",
+      "w": 4.04,
+      "d": 8.0,
+      "tint": "none"
+    },
+    {
+      "id": "solid-frames-and-boards/4x8-foam-core-angled",
+      "name": "4x8 Foam Core Angled",
+      "category": "Frames & Boards",
+      "file": "solid-frames-and-boards/4x8-foam-core-angled_3.14x8.png",
+      "w": 3.14,
+      "d": 8.0,
+      "tint": "none"
+    },
+    {
+      "id": "furniture/armchair_2.5x2.5",
+      "name": "Armchair",
+      "category": "Furniture",
+      "file": "furniture/armchair_2.5x2.5.png",
+      "w": 2.5,
+      "d": 2.5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/bed-queen_5x6.7",
+      "name": "Bed queen",
+      "category": "Furniture",
+      "file": "furniture/bed-queen_5x6.7.png",
+      "w": 5,
+      "d": 6.7,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/bed-single_3.2x6.5",
+      "name": "Bed single",
+      "category": "Furniture",
+      "file": "furniture/bed-single_3.2x6.5.png",
+      "w": 3.2,
+      "d": 6.5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/bench_5x1.5",
+      "name": "Bench",
+      "category": "Furniture",
+      "file": "furniture/bench_5x1.5.png",
+      "w": 5,
+      "d": 1.5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/bookshelf_3x1",
+      "name": "Bookshelf",
+      "category": "Furniture",
+      "file": "furniture/bookshelf_3x1.png",
+      "w": 3,
+      "d": 1,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/cafe-table_2.5x2.5",
+      "name": "Cafe table",
+      "category": "Furniture",
+      "file": "furniture/cafe-table_2.5x2.5.png",
+      "w": 2.5,
+      "d": 2.5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/chair_1.7x1.7",
+      "name": "Chair",
+      "category": "Furniture",
+      "file": "furniture/chair_1.7x1.7.png",
+      "w": 1.7,
+      "d": 1.7,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/coffee-table_4x2",
+      "name": "Coffee table",
+      "category": "Furniture",
+      "file": "furniture/coffee-table_4x2.png",
+      "w": 4,
+      "d": 2,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/desk_5x2.5",
+      "name": "Desk",
+      "category": "Furniture",
+      "file": "furniture/desk_5x2.5.png",
+      "w": 5,
+      "d": 2.5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/dining-table_6x3",
+      "name": "Dining table",
+      "category": "Furniture",
+      "file": "furniture/dining-table_6x3.png",
+      "w": 6,
+      "d": 3,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/dresser_5x1.7",
+      "name": "Dresser",
+      "category": "Furniture",
+      "file": "furniture/dresser_5x1.7.png",
+      "w": 5,
+      "d": 1.7,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/nightstand_1.5x1.5",
+      "name": "Nightstand",
+      "category": "Furniture",
+      "file": "furniture/nightstand_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/piano-upright_5x2.2",
+      "name": "Piano upright",
+      "category": "Furniture",
+      "file": "furniture/piano-upright_5x2.2.png",
+      "w": 5,
+      "d": 2.2,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/round-table_4x4",
+      "name": "Round table",
+      "category": "Furniture",
+      "file": "furniture/round-table_4x4.png",
+      "w": 4,
+      "d": 4,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/rug_8x5",
+      "name": "Rug",
+      "category": "Furniture",
+      "file": "furniture/rug_8x5.png",
+      "w": 8,
+      "d": 5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/side-table_1.5x1.5",
+      "name": "Side table",
+      "category": "Furniture",
+      "file": "furniture/side-table_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/sofa-2seat_5x3",
+      "name": "Sofa 2seat",
+      "category": "Furniture",
+      "file": "furniture/sofa-2seat_5x3.png",
+      "w": 5,
+      "d": 3,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/sofa-3seat_7x3",
+      "name": "Sofa 3seat",
+      "category": "Furniture",
+      "file": "furniture/sofa-3seat_7x3.png",
+      "w": 7,
+      "d": 3,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/stool_1.2x1.2",
+      "name": "Stool",
+      "category": "Furniture",
+      "file": "furniture/stool_1.2x1.2.png",
+      "w": 1.2,
+      "d": 1.2,
+      "tint": "light"
+    },
+    {
+      "id": "furniture/tv-stand_4x1.5",
+      "name": "Tv stand",
+      "category": "Furniture",
+      "file": "furniture/tv-stand_4x1.5.png",
+      "w": 4,
+      "d": 1.5,
+      "tint": "light"
+    },
+    {
+      "id": "hmi-fixtures/arri-fresnel-18-12",
+      "name": "Arri Fresnel 18-12",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/arri-fresnel-18-12_2.52x3.png",
+      "w": 2.52,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/arri-m18",
+      "name": "Arri M18",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/arri-m18_2.88x3.png",
+      "w": 2.88,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/arri-m40",
+      "name": "Arri M40",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/arri-m40_2.87x3.png",
+      "w": 2.87,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/arri-m8",
+      "name": "Arri M8",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/arri-m8_2.87x3.png",
+      "w": 2.87,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/arri-m90",
+      "name": "Arri M90",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/arri-m90_2.87x3.png",
+      "w": 2.87,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/arrimax-18-12",
+      "name": "Arrimax 18-12",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/arrimax-18-12_2.88x3.png",
+      "w": 2.88,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker-1600",
+      "name": "Joker 1600",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker-1600_2.44x3.png",
+      "w": 2.44,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker-1600-with-leko",
+      "name": "Joker 1600 with Leko",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker-1600-with-leko_1.24x3.png",
+      "w": 1.24,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker-200",
+      "name": "Joker 200",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker-200_2.1x3.png",
+      "w": 2.1,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker-400",
+      "name": "Joker 400",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker-400_2.1x3.png",
+      "w": 2.1,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker-400-with-leko",
+      "name": "Joker 400 with Leko",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker-400-with-leko_1.12x3.png",
+      "w": 1.12,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker-800",
+      "name": "Joker 800",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker-800_2.44x3.png",
+      "w": 2.44,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker-800-with-leko",
+      "name": "Joker 800 with Leko",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker-800-with-leko_1.04x3.png",
+      "w": 1.04,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker2-1600",
+      "name": "Joker2 1600",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker2-1600_1.74x3.png",
+      "w": 1.74,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker2-1600-with-leko",
+      "name": "Joker2 1600 with Leko",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker2-1600-with-leko_1.16x3.png",
+      "w": 1.16,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker2-400",
+      "name": "Joker2 400",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker2-400_2.12x3.png",
+      "w": 2.12,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker2-400-with-leko",
+      "name": "Joker2 400 with Leko",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker2-400-with-leko_1.11x3.png",
+      "w": 1.11,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker2-800",
+      "name": "Joker2 800",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker2-800_2.12x3.png",
+      "w": 2.12,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "hmi-fixtures/joker2-800-with-leko",
+      "name": "Joker2 800 with Leko",
+      "category": "HMI Fixtures",
+      "file": "hmi-fixtures/joker2-800-with-leko_1.05x3.png",
+      "w": 1.05,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/1x1-litemat",
+      "name": "1x1 Litemat",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/1x1-litemat_0.97x1.png",
+      "w": 0.97,
+      "d": 1.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/2k-led",
+      "name": "2K LED",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/2k-led_1.89x2.png",
+      "w": 1.89,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/2x2-litemat",
+      "name": "2x2 Litemat",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/2x2-litemat_1.95x2.png",
+      "w": 1.95,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/4x1-litemat",
+      "name": "4x1 Litemat",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/4x1-litemat_1.12x4.png",
+      "w": 1.12,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/4x2-litemat",
+      "name": "4x2 Litemat",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/4x2-litemat_2.03x4.png",
+      "w": 2.03,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-120d",
+      "name": "Aputure 120D",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-120d_1.05x2.png",
+      "w": 1.05,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-300d",
+      "name": "Aputure 300D",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-300d_0.93x2.png",
+      "w": 0.93,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-300d-with-fresnel",
+      "name": "Aputure 300D with Fresnel",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-300d-with-fresnel_0.81x2.png",
+      "w": 0.81,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-300d-with-spotlight",
+      "name": "Aputure 300D with Spotlight",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-300d-with-spotlight_0.57x2.png",
+      "w": 0.57,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-600d",
+      "name": "Aputure 600D",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-600d_1.02x2.png",
+      "w": 1.02,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-600d-with-fresnel",
+      "name": "Aputure 600D with Fresnel",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-600d-with-fresnel_1.72x2.png",
+      "w": 1.72,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-600d-with-spotlight",
+      "name": "Aputure 600D with Spotlight",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-600d-with-spotlight_0.6x2.png",
+      "w": 0.6,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-ls-1-2w",
+      "name": "Aputure LS 1-2w",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-ls-1-2w_2x1.07.png",
+      "w": 2.0,
+      "d": 1.07,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-ls-1-2w-top",
+      "name": "Aputure LS 1-2w Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-ls-1-2w-top_2x0.86.png",
+      "w": 2.0,
+      "d": 0.86,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/aputure-ls-mini20",
+      "name": "Aputure LS-mini20",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/aputure-ls-mini20_0.93x2.png",
+      "w": 0.93,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-l10",
+      "name": "Arri L10",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-l10_1.58x2.png",
+      "w": 1.58,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-l5",
+      "name": "Arri L5",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-l5_1.57x2.png",
+      "w": 1.57,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-l7",
+      "name": "Arri L7",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-l7_1.57x2.png",
+      "w": 1.57,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-orbiter",
+      "name": "Arri Orbiter",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-orbiter_1.85x2.png",
+      "w": 1.85,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-orbiter-with-dome",
+      "name": "Arri Orbiter with Dome",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-orbiter-with-dome_1.94x2.png",
+      "w": 1.94,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s120c",
+      "name": "Arri S120c",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s120c_2x0.9.png",
+      "w": 2.0,
+      "d": 0.9,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s120c-top",
+      "name": "Arri S120c Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s120c-top_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s30c",
+      "name": "Arri S30c",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s30c_2x2.png",
+      "w": 2.0,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s30c-top",
+      "name": "Arri S30c Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s30c-top_2x0.47.png",
+      "w": 2.0,
+      "d": 0.47,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s360c",
+      "name": "Arri S360c",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s360c_2x1.54.png",
+      "w": 2.0,
+      "d": 1.54,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s360c-top",
+      "name": "Arri S360c Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s360c-top_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s60c",
+      "name": "Arri S60c",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s60c_2x1.37.png",
+      "w": 2.0,
+      "d": 1.37,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/arri-s60c-top",
+      "name": "Arri S60c Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/arri-s60c-top_2x0.32.png",
+      "w": 2.0,
+      "d": 0.32,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/astera-ax1-pixel-tube",
+      "name": "Astera AX1 Pixel Tube",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/astera-ax1-pixel-tube_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/astra-1x1",
+      "name": "Astra 1x1",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/astra-1x1_1x1.png",
+      "w": 1.0,
+      "d": 1.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/astra-1x1-top",
+      "name": "Astra 1x1 Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/astra-1x1-top_1x0.3.png",
+      "w": 1.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/ds-1",
+      "name": "DS-1",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/ds-1_0.96x2.png",
+      "w": 0.96,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/ds-1-single",
+      "name": "DS-1 Single",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/ds-1-single_2x1.47.png",
+      "w": 2.0,
+      "d": 1.47,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/digital-sputnik-ds1-front",
+      "name": "Digital Sputnik DS1 Front",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/digital-sputnik-ds1-front_1.96x2.png",
+      "w": 1.96,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/digital-sputnik-ds6",
+      "name": "Digital Sputnik DS6",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/digital-sputnik-ds6_1.33x2.png",
+      "w": 1.33,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/digital-sputnik-voyager-2ft",
+      "name": "Digital Sputnik Voyager 2ft",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/digital-sputnik-voyager-2ft_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/digital-sputnik-voyager-4ft",
+      "name": "Digital Sputnik Voyager 4ft",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/digital-sputnik-voyager-4ft_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/etc-source-four-led-ellipsoidal",
+      "name": "ETC Source Four LED Ellipsoidal",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/etc-source-four-led-ellipsoidal_2x0.66.png",
+      "w": 2.0,
+      "d": 0.66,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/hudson-spider-mozzie",
+      "name": "Hudson Spider Mozzie",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/hudson-spider-mozzie_1.75x2.png",
+      "w": 1.75,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/hudson-spider-redback",
+      "name": "Hudson Spider Redback",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/hudson-spider-redback_2x2.png",
+      "w": 2.0,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/kino-celeb-250",
+      "name": "Kino Celeb 250",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/kino-celeb-250_2x1.31.png",
+      "w": 2.0,
+      "d": 1.31,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/kino-celeb-250-top",
+      "name": "Kino Celeb 250 Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/kino-celeb-250-top_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/kino-celeb-450",
+      "name": "Kino Celeb 450",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/kino-celeb-450_2x0.76.png",
+      "w": 2.0,
+      "d": 0.76,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/kino-celeb-450-top",
+      "name": "Kino Celeb 450 Top",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/kino-celeb-450-top_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/kino-celeb-850-front",
+      "name": "Kino Celeb 850 Front",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/kino-celeb-850-front_2x1.15.png",
+      "w": 2.0,
+      "d": 1.15,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/literibbon-12",
+      "name": "LiteRibbon 12'",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/literibbon-12_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/literibbon-24",
+      "name": "LiteRibbon 24'",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/literibbon-24_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/litetile-2x4",
+      "name": "LiteTile 2x4",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/litetile-2x4_4x2.07.png",
+      "w": 4.0,
+      "d": 2.07,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/litetile-2x8",
+      "name": "LiteTile 2x8",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/litetile-2x8_8x2.11.png",
+      "w": 8.0,
+      "d": 2.11,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/mole-1600w-tenorled",
+      "name": "Mole 1600w TenorLED",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/mole-1600w-tenorled_1.79x2.png",
+      "w": 1.79,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/mole-900w-seniorled",
+      "name": "Mole 900w SeniorLED",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/mole-900w-seniorled_1.79x2.png",
+      "w": 1.79,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-1-bi-color",
+      "name": "Quasar 1' Bi-Color",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-1-bi-color_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-1-daylight",
+      "name": "Quasar 1' Daylight",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-1-daylight_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-1-tungsten",
+      "name": "Quasar 1' Tungsten",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-1-tungsten_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-12-q-led",
+      "name": "Quasar 12' Q-LED",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-12-q-led_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-2-bi-color",
+      "name": "Quasar 2' Bi-Color",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-2-bi-color_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-2-daylight",
+      "name": "Quasar 2' Daylight",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-2-daylight_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-2-tungsten",
+      "name": "Quasar 2' Tungsten",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-2-tungsten_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-24-q-led",
+      "name": "Quasar 24' Q-LED",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-24-q-led_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-4-bi-color",
+      "name": "Quasar 4' Bi-Color",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-4-bi-color_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-4-daylight",
+      "name": "Quasar 4' Daylight",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-4-daylight_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-4-tungsten",
+      "name": "Quasar 4' Tungsten",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-4-tungsten_2x0.3.png",
+      "w": 2.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-7-q-led",
+      "name": "Quasar 7' Q-LED",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-7-q-led_2x0.43.png",
+      "w": 2.0,
+      "d": 0.43,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-bi-color-upright",
+      "name": "Quasar Bi-Color Upright",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-bi-color-upright_1.94x2.png",
+      "w": 1.94,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-daylight-upright",
+      "name": "Quasar Daylight Upright",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-daylight-upright_1.94x2.png",
+      "w": 1.94,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/quasar-tungsten-upright",
+      "name": "Quasar Tungsten Upright",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/quasar-tungsten-upright_1.94x2.png",
+      "w": 1.94,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "led-fixtures/small-led",
+      "name": "Small LED",
+      "category": "LED Fixtures",
+      "file": "led-fixtures/small-led_2x1.38.png",
+      "w": 2.0,
+      "d": 1.38,
+      "tint": "none"
+    },
+    {
+      "id": "labels/1-label",
+      "name": "1 Label",
+      "category": "Labels",
+      "file": "labels/1-label_1.49x1.5.png",
+      "w": 1.49,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/1-marker-black",
+      "name": "1 Marker Black",
+      "category": "Labels",
+      "file": "labels/1-marker-black_0.69x1.5.png",
+      "w": 0.69,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/1-marker-blue",
+      "name": "1 Marker Blue",
+      "category": "Labels",
+      "file": "labels/1-marker-blue_0.69x1.5.png",
+      "w": 0.69,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/1-marker-green",
+      "name": "1 Marker Green",
+      "category": "Labels",
+      "file": "labels/1-marker-green_0.69x1.5.png",
+      "w": 0.69,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/1-marker-red",
+      "name": "1 Marker Red",
+      "category": "Labels",
+      "file": "labels/1-marker-red_0.69x1.5.png",
+      "w": 0.69,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/1-marker-yellow",
+      "name": "1 Marker Yellow",
+      "category": "Labels",
+      "file": "labels/1-marker-yellow_0.69x1.5.png",
+      "w": 0.69,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/2-label",
+      "name": "2 Label",
+      "category": "Labels",
+      "file": "labels/2-label_1.49x1.5.png",
+      "w": 1.49,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/2-marker-black",
+      "name": "2 Marker Black",
+      "category": "Labels",
+      "file": "labels/2-marker-black_1.05x1.5.png",
+      "w": 1.05,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/2-marker-blue",
+      "name": "2 Marker Blue",
+      "category": "Labels",
+      "file": "labels/2-marker-blue_1.05x1.5.png",
+      "w": 1.05,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/2-marker-green",
+      "name": "2 Marker Green",
+      "category": "Labels",
+      "file": "labels/2-marker-green_1.03x1.5.png",
+      "w": 1.03,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/2-marker-red",
+      "name": "2 Marker Red",
+      "category": "Labels",
+      "file": "labels/2-marker-red_1.03x1.5.png",
+      "w": 1.03,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/2-marker-yellow",
+      "name": "2 Marker Yellow",
+      "category": "Labels",
+      "file": "labels/2-marker-yellow_1.03x1.5.png",
+      "w": 1.03,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/3-label",
+      "name": "3 Label",
+      "category": "Labels",
+      "file": "labels/3-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/3-marker-black",
+      "name": "3 Marker Black",
+      "category": "Labels",
+      "file": "labels/3-marker-black_1.02x1.5.png",
+      "w": 1.02,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/3-marker-blue",
+      "name": "3 Marker Blue",
+      "category": "Labels",
+      "file": "labels/3-marker-blue_1.02x1.5.png",
+      "w": 1.02,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/3-marker-green",
+      "name": "3 Marker Green",
+      "category": "Labels",
+      "file": "labels/3-marker-green_1.02x1.5.png",
+      "w": 1.02,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/3-marker-red",
+      "name": "3 Marker Red",
+      "category": "Labels",
+      "file": "labels/3-marker-red_1.02x1.5.png",
+      "w": 1.02,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/3-marker-yellow",
+      "name": "3 Marker Yellow",
+      "category": "Labels",
+      "file": "labels/3-marker-yellow_1.02x1.5.png",
+      "w": 1.02,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/4-label",
+      "name": "4 Label",
+      "category": "Labels",
+      "file": "labels/4-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/4-marker-black",
+      "name": "4 Marker Black",
+      "category": "Labels",
+      "file": "labels/4-marker-black_1.19x1.5.png",
+      "w": 1.19,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/4-marker-blue",
+      "name": "4 Marker Blue",
+      "category": "Labels",
+      "file": "labels/4-marker-blue_1.19x1.5.png",
+      "w": 1.19,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/4-marker-green",
+      "name": "4 Marker Green",
+      "category": "Labels",
+      "file": "labels/4-marker-green_1.19x1.5.png",
+      "w": 1.19,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/4-marker-red",
+      "name": "4 Marker Red",
+      "category": "Labels",
+      "file": "labels/4-marker-red_1.19x1.5.png",
+      "w": 1.19,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/4-marker-yellow",
+      "name": "4 Marker Yellow",
+      "category": "Labels",
+      "file": "labels/4-marker-yellow_1.19x1.5.png",
+      "w": 1.19,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/5-label",
+      "name": "5 Label",
+      "category": "Labels",
+      "file": "labels/5-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/5-marker-black",
+      "name": "5 Marker Black",
+      "category": "Labels",
+      "file": "labels/5-marker-black_1.03x1.5.png",
+      "w": 1.03,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/5-marker-blue",
+      "name": "5 Marker Blue",
+      "category": "Labels",
+      "file": "labels/5-marker-blue_1.03x1.5.png",
+      "w": 1.03,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/5-marker-green",
+      "name": "5 Marker Green",
+      "category": "Labels",
+      "file": "labels/5-marker-green_1.05x1.5.png",
+      "w": 1.05,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/5-marker-red",
+      "name": "5 Marker Red",
+      "category": "Labels",
+      "file": "labels/5-marker-red_1.05x1.5.png",
+      "w": 1.05,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/5-marker-yellow",
+      "name": "5 Marker Yellow",
+      "category": "Labels",
+      "file": "labels/5-marker-yellow_1.05x1.5.png",
+      "w": 1.05,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/a-label",
+      "name": "A Label",
+      "category": "Labels",
+      "file": "labels/a-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/arrow-black",
+      "name": "Arrow Black",
+      "category": "Labels",
+      "file": "labels/arrow-black_1.5x0.5.png",
+      "w": 1.5,
+      "d": 0.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/arrow-blue",
+      "name": "Arrow Blue",
+      "category": "Labels",
+      "file": "labels/arrow-blue_1.5x0.5.png",
+      "w": 1.5,
+      "d": 0.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/arrow-green",
+      "name": "Arrow Green",
+      "category": "Labels",
+      "file": "labels/arrow-green_1.5x0.5.png",
+      "w": 1.5,
+      "d": 0.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/arrow-red",
+      "name": "Arrow Red",
+      "category": "Labels",
+      "file": "labels/arrow-red_1.5x0.5.png",
+      "w": 1.5,
+      "d": 0.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/arrow-yellow",
+      "name": "Arrow Yellow",
+      "category": "Labels",
+      "file": "labels/arrow-yellow_1.5x0.5.png",
+      "w": 1.5,
+      "d": 0.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/b-label",
+      "name": "B Label",
+      "category": "Labels",
+      "file": "labels/b-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/c-label",
+      "name": "C Label",
+      "category": "Labels",
+      "file": "labels/c-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/compass",
+      "name": "Compass",
+      "category": "Labels",
+      "file": "labels/compass_1.48x1.5.png",
+      "w": 1.48,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/d-label",
+      "name": "D Label",
+      "category": "Labels",
+      "file": "labels/d-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/e-label",
+      "name": "E Label",
+      "category": "Labels",
+      "file": "labels/e-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/edge-label",
+      "name": "Edge Label",
+      "category": "Labels",
+      "file": "labels/edge-label_1.5x0.57.png",
+      "w": 1.5,
+      "d": 0.57,
+      "tint": "none"
+    },
+    {
+      "id": "labels/eye-label",
+      "name": "Eye Label",
+      "category": "Labels",
+      "file": "labels/eye-label_1.5x0.74.png",
+      "w": 1.5,
+      "d": 0.74,
+      "tint": "none"
+    },
+    {
+      "id": "labels/f-label",
+      "name": "F Label",
+      "category": "Labels",
+      "file": "labels/f-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/fill-label",
+      "name": "Fill Label",
+      "category": "Labels",
+      "file": "labels/fill-label_1.5x0.73.png",
+      "w": 1.5,
+      "d": 0.73,
+      "tint": "none"
+    },
+    {
+      "id": "labels/g-label",
+      "name": "G Label",
+      "category": "Labels",
+      "file": "labels/g-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/h-label",
+      "name": "H Label",
+      "category": "Labels",
+      "file": "labels/h-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/j-label",
+      "name": "J Label",
+      "category": "Labels",
+      "file": "labels/j-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/k-label",
+      "name": "K Label",
+      "category": "Labels",
+      "file": "labels/k-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/key-label",
+      "name": "Key Label",
+      "category": "Labels",
+      "file": "labels/key-label_1.5x0.74.png",
+      "w": 1.5,
+      "d": 0.74,
+      "tint": "none"
+    },
+    {
+      "id": "labels/kicker-label",
+      "name": "Kicker Label",
+      "category": "Labels",
+      "file": "labels/kicker-label_1.5x0.43.png",
+      "w": 1.5,
+      "d": 0.43,
+      "tint": "none"
+    },
+    {
+      "id": "labels/m-label",
+      "name": "M Label",
+      "category": "Labels",
+      "file": "labels/m-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/n-label",
+      "name": "N Label",
+      "category": "Labels",
+      "file": "labels/n-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/p-label",
+      "name": "P Label",
+      "category": "Labels",
+      "file": "labels/p-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/r-label",
+      "name": "R Label",
+      "category": "Labels",
+      "file": "labels/r-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/s-label",
+      "name": "S Label",
+      "category": "Labels",
+      "file": "labels/s-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/sun-rise",
+      "name": "Sun Rise",
+      "category": "Labels",
+      "file": "labels/sun-rise_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/sun-set",
+      "name": "Sun Set",
+      "category": "Labels",
+      "file": "labels/sun-set_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/t-label",
+      "name": "T Label",
+      "category": "Labels",
+      "file": "labels/t-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/u-label",
+      "name": "U Label",
+      "category": "Labels",
+      "file": "labels/u-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/v-label",
+      "name": "V Label",
+      "category": "Labels",
+      "file": "labels/v-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/w-label",
+      "name": "W Label",
+      "category": "Labels",
+      "file": "labels/w-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/x-label",
+      "name": "X Label",
+      "category": "Labels",
+      "file": "labels/x-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "labels/x-marker-black",
+      "name": "X Marker Black",
+      "category": "Labels",
+      "file": "labels/x-marker-black_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/x-marker-blue",
+      "name": "X Marker Blue",
+      "category": "Labels",
+      "file": "labels/x-marker-blue_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/x-marker-green",
+      "name": "X Marker Green",
+      "category": "Labels",
+      "file": "labels/x-marker-green_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/x-marker-red",
+      "name": "X Marker Red",
+      "category": "Labels",
+      "file": "labels/x-marker-red_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/x-marker-yellow",
+      "name": "X Marker Yellow",
+      "category": "Labels",
+      "file": "labels/x-marker-yellow_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/y-label",
+      "name": "Y Label",
+      "category": "Labels",
+      "file": "labels/y-label_1.5x1.5.png",
+      "w": 1.5,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "labels/z-label",
+      "name": "Z Label",
+      "category": "Labels",
+      "file": "labels/z-label_1.5x1.49.png",
+      "w": 1.5,
+      "d": 1.49,
+      "tint": "none"
+    },
+    {
+      "id": "misc/100a-lunch-box",
+      "name": "100A Lunch Box",
+      "category": "Misc",
+      "file": "misc/100a-lunch-box_1.5x0.93.png",
+      "w": 1.5,
+      "d": 0.93,
+      "tint": "none"
+    },
+    {
+      "id": "misc/10x10-canopy",
+      "name": "10x10 Canopy",
+      "category": "Misc",
+      "file": "misc/10x10-canopy_10x9.75.png",
+      "w": 10.0,
+      "d": 9.75,
+      "tint": "none"
+    },
+    {
+      "id": "misc/400a-distro",
+      "name": "400A Distro",
+      "category": "Misc",
+      "file": "misc/400a-distro_2x0.97.png",
+      "w": 2.0,
+      "d": 0.97,
+      "tint": "none"
+    },
+    {
+      "id": "misc/400a-distro-pass-thru",
+      "name": "400A Distro Pass Thru",
+      "category": "Misc",
+      "file": "misc/400a-distro-pass-thru_2x1.07.png",
+      "w": 2.0,
+      "d": 1.07,
+      "tint": "none"
+    },
+    {
+      "id": "misc/600a-distro-3-phase",
+      "name": "600A Distro 3 Phase",
+      "category": "Misc",
+      "file": "misc/600a-distro-3-phase_2x0.97.png",
+      "w": 2.0,
+      "d": 0.97,
+      "tint": "none"
+    },
+    {
+      "id": "misc/600a-distro-3-phase-pass-thru",
+      "name": "600A Distro 3 Phase Pass Thru",
+      "category": "Misc",
+      "file": "misc/600a-distro-3-phase-pass-thru_2x1.05.png",
+      "w": 2.0,
+      "d": 1.05,
+      "tint": "none"
+    },
+    {
+      "id": "misc/60a-gang-box",
+      "name": "60A Gang Box",
+      "category": "Misc",
+      "file": "misc/60a-gang-box_3x1.86.png",
+      "w": 3.0,
+      "d": 1.86,
+      "tint": "none"
+    },
+    {
+      "id": "misc/bed",
+      "name": "Bed",
+      "category": "Misc",
+      "file": "misc/bed_2.56x3.png",
+      "w": 2.56,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/bed-one-person-left-back",
+      "name": "Bed One Person Left Back",
+      "category": "Misc",
+      "file": "misc/bed-one-person-left-back_2.57x3.png",
+      "w": 2.57,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/bed-one-person-left-side",
+      "name": "Bed One Person Left Side",
+      "category": "Misc",
+      "file": "misc/bed-one-person-left-side_2.57x3.png",
+      "w": 2.57,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/bed-one-person-right-back",
+      "name": "Bed One Person Right Back",
+      "category": "Misc",
+      "file": "misc/bed-one-person-right-back_2.56x3.png",
+      "w": 2.56,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/bed-one-person-right-side",
+      "name": "Bed One Person Right Side",
+      "category": "Misc",
+      "file": "misc/bed-one-person-right-side_2.56x3.png",
+      "w": 2.56,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/bed-two-people-backs",
+      "name": "Bed Two People Backs",
+      "category": "Misc",
+      "file": "misc/bed-two-people-backs_2.56x3.png",
+      "w": 2.56,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/car",
+      "name": "Car",
+      "category": "Misc",
+      "file": "misc/car_7.1x15.png",
+      "w": 7.1,
+      "d": 15.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/crafty-table",
+      "name": "Crafty Table",
+      "category": "Misc",
+      "file": "misc/crafty-table_3x1.44.png",
+      "w": 3.0,
+      "d": 1.44,
+      "tint": "none"
+    },
+    {
+      "id": "misc/dit-cart",
+      "name": "DIT Cart",
+      "category": "Misc",
+      "file": "misc/dit-cart_15x7.46.png",
+      "w": 15.0,
+      "d": 7.46,
+      "tint": "none"
+    },
+    {
+      "id": "misc/distro",
+      "name": "Distro",
+      "category": "Misc",
+      "file": "misc/distro_1.34x2.png",
+      "w": 1.34,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/double-couch",
+      "name": "Double Couch",
+      "category": "Misc",
+      "file": "misc/double-couch_3x1.43.png",
+      "w": 3.0,
+      "d": 1.43,
+      "tint": "none"
+    },
+    {
+      "id": "misc/generator",
+      "name": "Generator",
+      "category": "Misc",
+      "file": "misc/generator_8.5x12.png",
+      "w": 8.5,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/gray-chair",
+      "name": "Gray Chair",
+      "category": "Misc",
+      "file": "misc/gray-chair_2.83x3.png",
+      "w": 2.83,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/hazer",
+      "name": "Hazer",
+      "category": "Misc",
+      "file": "misc/hazer_1.97x3.png",
+      "w": 1.97,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/hedge",
+      "name": "Hedge",
+      "category": "Misc",
+      "file": "misc/hedge_6x2.08.png",
+      "w": 6.0,
+      "d": 2.08,
+      "tint": "none"
+    },
+    {
+      "id": "misc/industrial-fan",
+      "name": "Industrial Fan",
+      "category": "Misc",
+      "file": "misc/industrial-fan_3x2.95.png",
+      "w": 3.0,
+      "d": 2.95,
+      "tint": "none"
+    },
+    {
+      "id": "misc/large-circular-table",
+      "name": "Large Circular Table",
+      "category": "Misc",
+      "file": "misc/large-circular-table_3x3.png",
+      "w": 3.0,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/large-square-table",
+      "name": "Large Square Table",
+      "category": "Misc",
+      "file": "misc/large-square-table_3x2.61.png",
+      "w": 3.0,
+      "d": 2.61,
+      "tint": "none"
+    },
+    {
+      "id": "misc/large-tree-trunk",
+      "name": "Large Tree Trunk",
+      "category": "Misc",
+      "file": "misc/large-tree-trunk_11.72x12.png",
+      "w": 11.72,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/mic-and-boom",
+      "name": "Mic and Boom",
+      "category": "Misc",
+      "file": "misc/mic-and-boom_3x0.41.png",
+      "w": 3.0,
+      "d": 0.41,
+      "tint": "none"
+    },
+    {
+      "id": "misc/office-chair",
+      "name": "Office Chair",
+      "category": "Misc",
+      "file": "misc/office-chair_3x2.29.png",
+      "w": 3.0,
+      "d": 2.29,
+      "tint": "none"
+    },
+    {
+      "id": "misc/production-monitor",
+      "name": "Production Monitor",
+      "category": "Misc",
+      "file": "misc/production-monitor_3x1.5.png",
+      "w": 3.0,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "misc/projector",
+      "name": "Projector",
+      "category": "Misc",
+      "file": "misc/projector_3x2.8.png",
+      "w": 3.0,
+      "d": 2.8,
+      "tint": "none"
+    },
+    {
+      "id": "misc/sidewalk-section",
+      "name": "Sidewalk Section",
+      "category": "Misc",
+      "file": "misc/sidewalk-section_3x0.77.png",
+      "w": 3.0,
+      "d": 0.77,
+      "tint": "none"
+    },
+    {
+      "id": "misc/single-couch",
+      "name": "Single Couch",
+      "category": "Misc",
+      "file": "misc/single-couch_3x2.41.png",
+      "w": 3.0,
+      "d": 2.41,
+      "tint": "none"
+    },
+    {
+      "id": "misc/sitting-person",
+      "name": "Sitting Person",
+      "category": "Misc",
+      "file": "misc/sitting-person_2.69x3.png",
+      "w": 2.69,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/small-circular-table",
+      "name": "Small Circular Table",
+      "category": "Misc",
+      "file": "misc/small-circular-table_3x3.png",
+      "w": 3.0,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/small-rectangle-table",
+      "name": "Small Rectangle Table",
+      "category": "Misc",
+      "file": "misc/small-rectangle-table_3x1.3.png",
+      "w": 3.0,
+      "d": 1.3,
+      "tint": "none"
+    },
+    {
+      "id": "misc/standing-person",
+      "name": "Standing Person",
+      "category": "Misc",
+      "file": "misc/standing-person_3x1.83.png",
+      "w": 3.0,
+      "d": 1.83,
+      "tint": "none"
+    },
+    {
+      "id": "misc/tow-generator",
+      "name": "Tow Generator",
+      "category": "Misc",
+      "file": "misc/tow-generator_6.7x12.png",
+      "w": 6.7,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/traffic-cone",
+      "name": "Traffic Cone",
+      "category": "Misc",
+      "file": "misc/traffic-cone_2.98x3.png",
+      "w": 2.98,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/tree",
+      "name": "Tree",
+      "category": "Misc",
+      "file": "misc/tree_11.92x12.png",
+      "w": 11.92,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/triple-couch",
+      "name": "Triple Couch",
+      "category": "Misc",
+      "file": "misc/triple-couch_3x1.01.png",
+      "w": 3.0,
+      "d": 1.01,
+      "tint": "none"
+    },
+    {
+      "id": "misc/truck",
+      "name": "Truck",
+      "category": "Misc",
+      "file": "misc/truck_8.65x20.png",
+      "w": 8.65,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "misc/walking-person",
+      "name": "Walking Person",
+      "category": "Misc",
+      "file": "misc/walking-person_2.77x3.png",
+      "w": 2.77,
+      "d": 3.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-flag-angled",
+      "name": "12x12 Flag Angled",
+      "category": "Rags",
+      "file": "rags/12x12-flag-angled_12x3.29.png",
+      "w": 12.0,
+      "d": 3.29,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-flag-free-hanging",
+      "name": "12x12 Flag Free Hanging",
+      "category": "Rags",
+      "file": "rags/12x12-flag-free-hanging_12x3.27.png",
+      "w": 12.0,
+      "d": 3.27,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-flag-with-frame",
+      "name": "12x12 Flag with Frame",
+      "category": "Rags",
+      "file": "rags/12x12-flag-with-frame_12x12.png",
+      "w": 12.0,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-grid-cloth-angled",
+      "name": "12x12 Grid Cloth Angled",
+      "category": "Rags",
+      "file": "rags/12x12-grid-cloth-angled_12x3.29.png",
+      "w": 12.0,
+      "d": 3.29,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-grid-cloth-free-hanging",
+      "name": "12x12 Grid Cloth Free Hanging",
+      "category": "Rags",
+      "file": "rags/12x12-grid-cloth-free-hanging_12x3.27.png",
+      "w": 12.0,
+      "d": 3.27,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-grid-cloth-with-frame",
+      "name": "12x12 Grid Cloth with Frame",
+      "category": "Rags",
+      "file": "rags/12x12-grid-cloth-with-frame_12x12.png",
+      "w": 12.0,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-ultra-bounce-angled",
+      "name": "12x12 Ultra Bounce Angled",
+      "category": "Rags",
+      "file": "rags/12x12-ultra-bounce-angled_12x3.29.png",
+      "w": 12.0,
+      "d": 3.29,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-ultra-bounce-free-hanging",
+      "name": "12x12 Ultra Bounce Free Hanging",
+      "category": "Rags",
+      "file": "rags/12x12-ultra-bounce-free-hanging_12x3.27.png",
+      "w": 12.0,
+      "d": 3.27,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-ultra-bounce-with-frame",
+      "name": "12x12 Ultra Bounce with Frame",
+      "category": "Rags",
+      "file": "rags/12x12-ultra-bounce-with-frame_12x12.png",
+      "w": 12.0,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-unbleached-muslin-angled",
+      "name": "12x12 Unbleached Muslin Angled",
+      "category": "Rags",
+      "file": "rags/12x12-unbleached-muslin-angled_12x3.29.png",
+      "w": 12.0,
+      "d": 3.29,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-unbleached-muslin-free-hanging",
+      "name": "12x12 Unbleached Muslin Free Hanging",
+      "category": "Rags",
+      "file": "rags/12x12-unbleached-muslin-free-hanging_12x3.27.png",
+      "w": 12.0,
+      "d": 3.27,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x12-unbleached-muslin-with-frame",
+      "name": "12x12 Unbleached Muslin with Frame",
+      "category": "Rags",
+      "file": "rags/12x12-unbleached-muslin-with-frame_12x12.png",
+      "w": 12.0,
+      "d": 12.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-flag-angled",
+      "name": "12x20 Flag Angled",
+      "category": "Rags",
+      "file": "rags/12x20-flag-angled_20x3.34.png",
+      "w": 20.0,
+      "d": 3.34,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-flag-with-frame",
+      "name": "12x20 Flag with Frame",
+      "category": "Rags",
+      "file": "rags/12x20-flag-with-frame_20x12.07.png",
+      "w": 20.0,
+      "d": 12.07,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-grid-cloth-angled",
+      "name": "12x20 Grid Cloth Angled",
+      "category": "Rags",
+      "file": "rags/12x20-grid-cloth-angled_20x3.31.png",
+      "w": 20.0,
+      "d": 3.31,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-grid-cloth-with-frame",
+      "name": "12x20 Grid Cloth with Frame",
+      "category": "Rags",
+      "file": "rags/12x20-grid-cloth-with-frame_20x12.07.png",
+      "w": 20.0,
+      "d": 12.07,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-ultra-bounce-angled",
+      "name": "12x20 Ultra Bounce Angled",
+      "category": "Rags",
+      "file": "rags/12x20-ultra-bounce-angled_20x3.34.png",
+      "w": 20.0,
+      "d": 3.34,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-ultra-bounce-with-frame",
+      "name": "12x20 Ultra Bounce with Frame",
+      "category": "Rags",
+      "file": "rags/12x20-ultra-bounce-with-frame_20x12.07.png",
+      "w": 20.0,
+      "d": 12.07,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-unbleached-muslin-angled",
+      "name": "12x20 Unbleached Muslin Angled",
+      "category": "Rags",
+      "file": "rags/12x20-unbleached-muslin-angled_20x3.34.png",
+      "w": 20.0,
+      "d": 3.34,
+      "tint": "none"
+    },
+    {
+      "id": "rags/12x20-unbleached-muslin-with-frame",
+      "name": "12x20 Unbleached Muslin with Frame",
+      "category": "Rags",
+      "file": "rags/12x20-unbleached-muslin-with-frame_20x12.07.png",
+      "w": 20.0,
+      "d": 12.07,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-flag-angled",
+      "name": "20x20 Flag Angled",
+      "category": "Rags",
+      "file": "rags/20x20-flag-angled_20x5.48.png",
+      "w": 20.0,
+      "d": 5.48,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-flag-free-hanging",
+      "name": "20x20 Flag Free Hanging",
+      "category": "Rags",
+      "file": "rags/20x20-flag-free-hanging_20x5.44.png",
+      "w": 20.0,
+      "d": 5.44,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-flag-with-frame",
+      "name": "20x20 Flag with Frame",
+      "category": "Rags",
+      "file": "rags/20x20-flag-with-frame_20x20.png",
+      "w": 20.0,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-grid-cloth-angled",
+      "name": "20x20 Grid Cloth Angled",
+      "category": "Rags",
+      "file": "rags/20x20-grid-cloth-angled_20x5.48.png",
+      "w": 20.0,
+      "d": 5.48,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-grid-cloth-free-hanging",
+      "name": "20x20 Grid Cloth Free Hanging",
+      "category": "Rags",
+      "file": "rags/20x20-grid-cloth-free-hanging_20x5.45.png",
+      "w": 20.0,
+      "d": 5.45,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-grid-cloth-with-frame",
+      "name": "20x20 Grid Cloth with Frame",
+      "category": "Rags",
+      "file": "rags/20x20-grid-cloth-with-frame_20x20.png",
+      "w": 20.0,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-ultra-bounce-angled",
+      "name": "20x20 Ultra Bounce Angled",
+      "category": "Rags",
+      "file": "rags/20x20-ultra-bounce-angled_20x5.48.png",
+      "w": 20.0,
+      "d": 5.48,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-ultra-bounce-free-hanging",
+      "name": "20x20 Ultra Bounce Free Hanging",
+      "category": "Rags",
+      "file": "rags/20x20-ultra-bounce-free-hanging_20x5.44.png",
+      "w": 20.0,
+      "d": 5.44,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-ultra-bounce-with-frame",
+      "name": "20x20 Ultra Bounce with Frame",
+      "category": "Rags",
+      "file": "rags/20x20-ultra-bounce-with-frame_20x20.png",
+      "w": 20.0,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-unbleached-muslin-angled",
+      "name": "20x20 Unbleached Muslin Angled",
+      "category": "Rags",
+      "file": "rags/20x20-unbleached-muslin-angled_20x5.48.png",
+      "w": 20.0,
+      "d": 5.48,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-unbleached-muslin-free-hanging",
+      "name": "20x20 Unbleached Muslin Free Hanging",
+      "category": "Rags",
+      "file": "rags/20x20-unbleached-muslin-free-hanging_20x5.44.png",
+      "w": 20.0,
+      "d": 5.44,
+      "tint": "none"
+    },
+    {
+      "id": "rags/20x20-unbleached-muslin-with-frame",
+      "name": "20x20 Unbleached Muslin with Frame",
+      "category": "Rags",
+      "file": "rags/20x20-unbleached-muslin-with-frame_20x20.png",
+      "w": 20.0,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-flag-angled",
+      "name": "6x6 Flag Angled",
+      "category": "Rags",
+      "file": "rags/6x6-flag-angled_6x1.65.png",
+      "w": 6.0,
+      "d": 1.65,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-flag-free-hanging",
+      "name": "6x6 Flag Free Hanging",
+      "category": "Rags",
+      "file": "rags/6x6-flag-free-hanging_6x1.63.png",
+      "w": 6.0,
+      "d": 1.63,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-flag-with-frame",
+      "name": "6x6 Flag with Frame",
+      "category": "Rags",
+      "file": "rags/6x6-flag-with-frame_6x6.png",
+      "w": 6.0,
+      "d": 6.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-grid-cloth-angled",
+      "name": "6x6 Grid Cloth Angled",
+      "category": "Rags",
+      "file": "rags/6x6-grid-cloth-angled_6x1.64.png",
+      "w": 6.0,
+      "d": 1.64,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-grid-cloth-free-hanging",
+      "name": "6x6 Grid Cloth Free Hanging",
+      "category": "Rags",
+      "file": "rags/6x6-grid-cloth-free-hanging_6x1.64.png",
+      "w": 6.0,
+      "d": 1.64,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-grid-cloth-with-frame",
+      "name": "6x6 Grid Cloth with Frame",
+      "category": "Rags",
+      "file": "rags/6x6-grid-cloth-with-frame_6x6.png",
+      "w": 6.0,
+      "d": 6.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-ultra-bounce-angled",
+      "name": "6x6 Ultra Bounce Angled",
+      "category": "Rags",
+      "file": "rags/6x6-ultra-bounce-angled_6x1.65.png",
+      "w": 6.0,
+      "d": 1.65,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-ultra-bounce-free-hanging",
+      "name": "6x6 Ultra Bounce Free Hanging",
+      "category": "Rags",
+      "file": "rags/6x6-ultra-bounce-free-hanging_6x1.63.png",
+      "w": 6.0,
+      "d": 1.63,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-ultra-bounce-with-frame",
+      "name": "6x6 Ultra Bounce with Frame",
+      "category": "Rags",
+      "file": "rags/6x6-ultra-bounce-with-frame_6x5.99.png",
+      "w": 6.0,
+      "d": 5.99,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-unbleached-muslin-angled",
+      "name": "6x6 Unbleached Muslin Angled",
+      "category": "Rags",
+      "file": "rags/6x6-unbleached-muslin-angled_6x1.65.png",
+      "w": 6.0,
+      "d": 1.65,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-unbleached-muslin-free-hanging",
+      "name": "6x6 Unbleached Muslin Free Hanging",
+      "category": "Rags",
+      "file": "rags/6x6-unbleached-muslin-free-hanging_6x1.63.png",
+      "w": 6.0,
+      "d": 1.63,
+      "tint": "none"
+    },
+    {
+      "id": "rags/6x6-unbleached-muslin-with-frame",
+      "name": "6x6 Unbleached Muslin with Frame",
+      "category": "Rags",
+      "file": "rags/6x6-unbleached-muslin-with-frame_6x5.99.png",
+      "w": 6.0,
+      "d": 5.99,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-flag-angled",
+      "name": "8x8 Flag Angled",
+      "category": "Rags",
+      "file": "rags/8x8-flag-angled_8x2.2.png",
+      "w": 8.0,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-flag-free-hanging",
+      "name": "8x8 Flag Free Hanging",
+      "category": "Rags",
+      "file": "rags/8x8-flag-free-hanging_8x2.18.png",
+      "w": 8.0,
+      "d": 2.18,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-flag-with-frame",
+      "name": "8x8 Flag with Frame",
+      "category": "Rags",
+      "file": "rags/8x8-flag-with-frame_8x8.png",
+      "w": 8.0,
+      "d": 8.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-grid-cloth-angled",
+      "name": "8x8 Grid Cloth Angled",
+      "category": "Rags",
+      "file": "rags/8x8-grid-cloth-angled_8x2.2.png",
+      "w": 8.0,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-grid-cloth-free-hanging",
+      "name": "8x8 Grid Cloth Free Hanging",
+      "category": "Rags",
+      "file": "rags/8x8-grid-cloth-free-hanging_8x2.18.png",
+      "w": 8.0,
+      "d": 2.18,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-grid-cloth-with-frame",
+      "name": "8x8 Grid Cloth with Frame",
+      "category": "Rags",
+      "file": "rags/8x8-grid-cloth-with-frame_8x7.99.png",
+      "w": 8.0,
+      "d": 7.99,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-ultra-bounce-angled",
+      "name": "8x8 Ultra Bounce Angled",
+      "category": "Rags",
+      "file": "rags/8x8-ultra-bounce-angled_8x2.2.png",
+      "w": 8.0,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-ultra-bounce-free-hanging",
+      "name": "8x8 Ultra Bounce Free Hanging",
+      "category": "Rags",
+      "file": "rags/8x8-ultra-bounce-free-hanging_8x2.18.png",
+      "w": 8.0,
+      "d": 2.18,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-ultra-bounce-with-frame",
+      "name": "8x8 Ultra Bounce with Frame",
+      "category": "Rags",
+      "file": "rags/8x8-ultra-bounce-with-frame_8x8.png",
+      "w": 8.0,
+      "d": 8.0,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-unbleached-muslin-angled",
+      "name": "8x8 Unbleached Muslin Angled",
+      "category": "Rags",
+      "file": "rags/8x8-unbleached-muslin-angled_8x2.2.png",
+      "w": 8.0,
+      "d": 2.2,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-unbleached-muslin-free-hanging",
+      "name": "8x8 Unbleached Muslin Free Hanging",
+      "category": "Rags",
+      "file": "rags/8x8-unbleached-muslin-free-hanging_8x2.18.png",
+      "w": 8.0,
+      "d": 2.18,
+      "tint": "none"
+    },
+    {
+      "id": "rags/8x8-unbleached-muslin-with-frame",
+      "name": "8x8 Unbleached Muslin with Frame",
+      "category": "Rags",
+      "file": "rags/8x8-unbleached-muslin-with-frame_8x8.png",
+      "w": 8.0,
+      "d": 8.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/plusgrn-roll",
+      "name": "+Grn Roll",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/plusgrn-roll_3.42x4.png",
+      "w": 3.42,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/grn-roll",
+      "name": "-Grn Roll",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/grn-roll_3.39x4.png",
+      "w": 3.39,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/bounce-showcard",
+      "name": "Bounce Showcard",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/bounce-showcard_13.53x15.png",
+      "w": 13.53,
+      "d": 15.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/bounce-showcard-blank",
+      "name": "Bounce Showcard Blank",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/bounce-showcard-blank_13.5x15.png",
+      "w": 13.5,
+      "d": 15.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/ctb-roll",
+      "name": "CTB Roll",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/ctb-roll_3.4x4.png",
+      "w": 3.4,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/cto-roll",
+      "name": "CTO Roll",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/cto-roll_3.39x4.png",
+      "w": 3.39,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/cut-plusgrn",
+      "name": "Cut +Grn",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/cut-plusgrn_4x3.26.png",
+      "w": 4.0,
+      "d": 3.26,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/cut-grn",
+      "name": "Cut -Grn",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/cut-grn_4x3.26.png",
+      "w": 4.0,
+      "d": 3.26,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/cut-ctb",
+      "name": "Cut CTB",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/cut-ctb_4x3.26.png",
+      "w": 4.0,
+      "d": 3.26,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/cut-cto",
+      "name": "Cut CTO",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/cut-cto_4x3.26.png",
+      "w": 4.0,
+      "d": 3.26,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/daylight-15-degrees",
+      "name": "Daylight 15 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/daylight-15-degrees_4x1.04.png",
+      "w": 4.0,
+      "d": 1.04,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/daylight-20-degrees",
+      "name": "Daylight 20 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/daylight-20-degrees_4x1.37.png",
+      "w": 4.0,
+      "d": 1.37,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/daylight-30-degrees",
+      "name": "Daylight 30 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/daylight-30-degrees_4x2.png",
+      "w": 4.0,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/daylight-5-degrees",
+      "name": "Daylight 5 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/daylight-5-degrees_4x0.35.png",
+      "w": 4.0,
+      "d": 0.35,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/daylight-50-degrees",
+      "name": "Daylight 50 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/daylight-50-degrees_4x3.06.png",
+      "w": 4.0,
+      "d": 3.06,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/daylight-70-degrees",
+      "name": "Daylight 70 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/daylight-70-degrees_4x3.76.png",
+      "w": 4.0,
+      "d": 3.76,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/daylight-90-degrees",
+      "name": "Daylight 90 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/daylight-90-degrees_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/density-eighth-label",
+      "name": "Density Eighth Label",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/density-eighth-label_4x2.17.png",
+      "w": 4.0,
+      "d": 2.17,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/density-half-label",
+      "name": "Density Half Label",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/density-half-label_4x2.17.png",
+      "w": 4.0,
+      "d": 2.17,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/density-quarter-label",
+      "name": "Density Quarter Label",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/density-quarter-label_4x2.17.png",
+      "w": 4.0,
+      "d": 2.17,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/frost-roll",
+      "name": "Frost Roll",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/frost-roll_3.39x4.png",
+      "w": 3.39,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/grid-roll",
+      "name": "Grid Roll",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/grid-roll_3.39x4.png",
+      "w": 3.39,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/large-daylight-globe",
+      "name": "Large Daylight Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/large-daylight-globe_4x3.99.png",
+      "w": 4.0,
+      "d": 3.99,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/large-tungsten-globe",
+      "name": "Large Tungsten Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/large-tungsten-globe_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/light-grid-roll",
+      "name": "Light Grid Roll",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/light-grid-roll_3.39x4.png",
+      "w": 3.39,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/medium-daylight-globe",
+      "name": "Medium Daylight Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/medium-daylight-globe_4x3.99.png",
+      "w": 4.0,
+      "d": 3.99,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/medium-tungsten-globe",
+      "name": "Medium Tungsten Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/medium-tungsten-globe_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/neg-showcard",
+      "name": "Neg Showcard",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/neg-showcard_13.53x15.png",
+      "w": 13.53,
+      "d": 15.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/neg-showcard-blank",
+      "name": "Neg Showcard Blank",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/neg-showcard-blank_13.5x15.png",
+      "w": 13.5,
+      "d": 15.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/smallest-daylight-globe",
+      "name": "Smallest Daylight Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/smallest-daylight-globe_3.96x4.png",
+      "w": 3.96,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/smallest-tungsten-globe",
+      "name": "Smallest Tungsten Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/smallest-tungsten-globe_3.96x4.png",
+      "w": 3.96,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/tungsten-15-degrees",
+      "name": "Tungsten 15 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/tungsten-15-degrees_4x1.04.png",
+      "w": 4.0,
+      "d": 1.04,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/tungsten-20-degrees",
+      "name": "Tungsten 20 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/tungsten-20-degrees_4x1.37.png",
+      "w": 4.0,
+      "d": 1.37,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/tungsten-30-degrees",
+      "name": "Tungsten 30 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/tungsten-30-degrees_4x2.png",
+      "w": 4.0,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/tungsten-5-degrees",
+      "name": "Tungsten 5 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/tungsten-5-degrees_4x0.35.png",
+      "w": 4.0,
+      "d": 0.35,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/tungsten-50-degrees",
+      "name": "Tungsten 50 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/tungsten-50-degrees_4x3.06.png",
+      "w": 4.0,
+      "d": 3.06,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/tungsten-70-degrees",
+      "name": "Tungsten 70 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/tungsten-70-degrees_4x3.76.png",
+      "w": 4.0,
+      "d": 3.76,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/tungsten-90-degrees",
+      "name": "Tungsten 90 Degrees",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/tungsten-90-degrees_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/very-large-daylight-globe",
+      "name": "Very Large Daylight Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/very-large-daylight-globe_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rolls-cards-and-light-beams/very-large-tungsten-globe",
+      "name": "Very Large Tungsten Globe",
+      "category": "Rolls & Cards",
+      "file": "rolls-cards-and-light-beams/very-large-tungsten-globe_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/10-x-10-corner-room",
+      "name": "10' x 10' Corner Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/10-x-10-corner-room_10x9.73.png",
+      "w": 10.0,
+      "d": 9.73,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/10-x-10-open-room",
+      "name": "10' x 10' Open Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/10-x-10-open-room_10x9.72.png",
+      "w": 10.0,
+      "d": 9.72,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/10-x-10-room",
+      "name": "10' x 10' Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/10-x-10-room_10x9.74.png",
+      "w": 10.0,
+      "d": 9.74,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/20-x-20-corner-room",
+      "name": "20' x 20' Corner Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/20-x-20-corner-room_19.46x20.png",
+      "w": 19.46,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/20-x-20-open-room",
+      "name": "20' x 20' Open Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/20-x-20-open-room_19.46x20.png",
+      "w": 19.46,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/20-x-20-room",
+      "name": "20' x 20' Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/20-x-20-room_19.46x20.png",
+      "w": 19.46,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/20-x-40-open-room",
+      "name": "20' x 40' Open Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/20-x-40-open-room_40x21.13.png",
+      "w": 40.0,
+      "d": 21.13,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/20-x-40-room",
+      "name": "20' x 40' Room",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/20-x-40-room_40x21.13.png",
+      "w": 40.0,
+      "d": 21.13,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/black-12ft-paper",
+      "name": "Black 12ft Paper",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/black-12ft-paper_12x3.64.png",
+      "w": 12.0,
+      "d": 3.64,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/brown-12ft-paper",
+      "name": "Brown 12ft Paper",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/brown-12ft-paper_12x3.64.png",
+      "w": 12.0,
+      "d": 3.64,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/door",
+      "name": "Door",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/door_12x2.51.png",
+      "w": 12.0,
+      "d": 2.51,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/gray-12ft-paper",
+      "name": "Gray 12ft Paper",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/gray-12ft-paper_12x3.64.png",
+      "w": 12.0,
+      "d": 3.64,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/green-12ft-paper",
+      "name": "Green 12ft Paper",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/green-12ft-paper_12x3.64.png",
+      "w": 12.0,
+      "d": 3.64,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/large-green-cyc-wall",
+      "name": "Large Green Cyc Wall",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/large-green-cyc-wall_12x6.42.png",
+      "w": 12.0,
+      "d": 6.42,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/large-white-cyc-wall",
+      "name": "Large White Cyc Wall",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/large-white-cyc-wall_12x6.42.png",
+      "w": 12.0,
+      "d": 6.42,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/large-window",
+      "name": "Large Window",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/large-window_12x2.31.png",
+      "w": 12.0,
+      "d": 2.31,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/navy-12ft-paper",
+      "name": "Navy 12ft Paper",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/navy-12ft-paper_12x3.64.png",
+      "w": 12.0,
+      "d": 3.64,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/pink-12ft-paper",
+      "name": "Pink 12ft Paper",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/pink-12ft-paper_12x3.64.png",
+      "w": 12.0,
+      "d": 3.64,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/small-green-cyc-wall",
+      "name": "Small Green Cyc Wall",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/small-green-cyc-wall_12x9.47.png",
+      "w": 12.0,
+      "d": 9.47,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/small-white-cyc-wall",
+      "name": "Small White Cyc Wall",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/small-white-cyc-wall_12x9.47.png",
+      "w": 12.0,
+      "d": 9.47,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/small-window",
+      "name": "Small Window",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/small-window_12x4.4.png",
+      "w": 12.0,
+      "d": 4.4,
+      "tint": "none"
+    },
+    {
+      "id": "rooms-and-spaces/white-12ft-paper",
+      "name": "White 12ft Paper",
+      "category": "Rooms & Spaces",
+      "file": "rooms-and-spaces/white-12ft-paper_12x3.64.png",
+      "w": 12.0,
+      "d": 3.64,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/10-curved-radius",
+      "name": "10' Curved Radius",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/10-curved-radius_4.25x10.png",
+      "w": 4.25,
+      "d": 10.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/20-curved-radius",
+      "name": "20' Curved Radius",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/20-curved-radius_7.51x20.png",
+      "w": 7.51,
+      "d": 20.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/3ft-slider",
+      "name": "3ft Slider",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/3ft-slider_4x0.84.png",
+      "w": 4.0,
+      "d": 0.84,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/4ft-track-section",
+      "name": "4ft Track Section",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/4ft-track-section_1.84x4.png",
+      "w": 1.84,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/6ft-slider",
+      "name": "6ft Slider",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/6ft-slider_4x0.44.png",
+      "w": 4.0,
+      "d": 0.44,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/8-box-truss",
+      "name": "8' Box Truss",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/8-box-truss_8x1.15.png",
+      "w": 8.0,
+      "d": 1.15,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/8ft-track-section",
+      "name": "8ft Track Section",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/8ft-track-section_0.91x4.png",
+      "w": 0.91,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/box-truss-90-degree-corner",
+      "name": "Box Truss 90 Degree Corner",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/box-truss-90-degree-corner_3.99x4.png",
+      "w": 3.99,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/chapman-dolly",
+      "name": "Chapman Dolly",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/chapman-dolly_3.21x4.png",
+      "w": 3.21,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/circle-track",
+      "name": "Circle Track",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/circle-track_4x4.png",
+      "w": 4.0,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/combo-stand",
+      "name": "Combo Stand",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/combo-stand_4x3.46.png",
+      "w": 4.0,
+      "d": 3.46,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/condor",
+      "name": "Condor",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/condor_8x3.88.png",
+      "w": 8.0,
+      "d": 3.88,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/crankovator-stand",
+      "name": "Crankovator Stand",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/crankovator-stand_4x3.48.png",
+      "w": 4.0,
+      "d": 3.48,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/dany-dolly-with-rails",
+      "name": "Dany Dolly with Rails",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/dany-dolly-with-rails_4x0.95.png",
+      "w": 4.0,
+      "d": 0.95,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/doorway-dolly-standard-wheels",
+      "name": "Doorway Dolly Standard Wheels",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/doorway-dolly-standard-wheels_2.51x5.png",
+      "w": 2.51,
+      "d": 5.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/doorway-dolly-track-wheels",
+      "name": "Doorway Dolly Track Wheels",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/doorway-dolly-track-wheels_2.56x5.png",
+      "w": 2.56,
+      "d": 5.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/easyrig",
+      "name": "Easyrig",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/easyrig_4x3.36.png",
+      "w": 4.0,
+      "d": 3.36,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/fisher-dolly",
+      "name": "Fisher Dolly",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/fisher-dolly_3.8x6.png",
+      "w": 3.8,
+      "d": 6.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/genie-lift",
+      "name": "Genie Lift",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/genie-lift_1.89x4.png",
+      "w": 1.89,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/kira",
+      "name": "Kira",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/kira_1.22x4.png",
+      "w": 1.22,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/ladder-truss-with-brackets",
+      "name": "Ladder Truss with Brackets",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/ladder-truss-with-brackets_0.77x4.png",
+      "w": 0.77,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/lightweight-sticks",
+      "name": "Lightweight Sticks",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/lightweight-sticks_4x3.71.png",
+      "w": 4.0,
+      "d": 3.71,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/menace-arm",
+      "name": "Menace Arm",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/menace-arm_0.47x4.png",
+      "w": 0.47,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/polecat-4ft",
+      "name": "Polecat 4ft",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/polecat-4ft_4x0.46.png",
+      "w": 4.0,
+      "d": 0.46,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/polecat-6ft",
+      "name": "Polecat 6ft",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/polecat-6ft_4x0.3.png",
+      "w": 4.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/polecat-8ft",
+      "name": "Polecat 8ft",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/polecat-8ft_4x0.3.png",
+      "w": 4.0,
+      "d": 0.3,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/regular-sticks",
+      "name": "Regular Sticks",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/regular-sticks_4x3.47.png",
+      "w": 4.0,
+      "d": 3.47,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/russian-arm",
+      "name": "Russian Arm",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/russian-arm_4x0.52.png",
+      "w": 4.0,
+      "d": 0.52,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/small-portable-jib",
+      "name": "Small Portable Jib",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/small-portable-jib_4x1.35.png",
+      "w": 4.0,
+      "d": 1.35,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/techno-crane",
+      "name": "Techno Crane",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/techno-crane_4x0.91.png",
+      "w": 4.0,
+      "d": 0.91,
+      "tint": "none"
+    },
+    {
+      "id": "support-and-rigging/triangle-truss-with-brackets",
+      "name": "Triangle Truss with Brackets",
+      "category": "Support & Rigging",
+      "file": "support-and-rigging/triangle-truss-with-brackets_0.77x4.png",
+      "w": 0.77,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/aputure-light-dome",
+      "name": "Aputure Light Dome",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/aputure-light-dome_2.5x1.66.png",
+      "w": 2.5,
+      "d": 1.66,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/aputure-light-dome-mini",
+      "name": "Aputure Light Dome Mini",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/aputure-light-dome-mini_2.5x1.48.png",
+      "w": 2.5,
+      "d": 1.48,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/arri-150",
+      "name": "Arri 150",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/arri-150_0.61x1.png",
+      "w": 0.61,
+      "d": 1.0,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/arri-2k-plus-arrilite",
+      "name": "Arri 2K Plus Arrilite",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/arri-2k-plus-arrilite_2.5x2.24.png",
+      "w": 2.5,
+      "d": 2.24,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/arri-300",
+      "name": "Arri 300",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/arri-300_0.94x1.2.png",
+      "w": 0.94,
+      "d": 1.2,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/arri-650",
+      "name": "Arri 650",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/arri-650_1.14x1.4.png",
+      "w": 1.14,
+      "d": 1.4,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/arri-750-plus-arrilite",
+      "name": "Arri 750 Plus Arrilite",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/arri-750-plus-arrilite_1.9x2.5.png",
+      "w": 1.9,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/arri-t12",
+      "name": "Arri T12",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/arri-t12_2.1x2.5.png",
+      "w": 2.1,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/arri-t24",
+      "name": "Arri T24",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/arri-t24_2.16x2.5.png",
+      "w": 2.16,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/bare-bulb",
+      "name": "Bare Bulb",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/bare-bulb_0.34x0.6.png",
+      "w": 0.34,
+      "d": 0.6,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/briese-focus-100",
+      "name": "Briese Focus 100",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/briese-focus-100_3.3x1.86.png",
+      "w": 3.3,
+      "d": 1.86,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/briese-focus-180",
+      "name": "Briese Focus 180",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/briese-focus-180_6x3.37.png",
+      "w": 6.0,
+      "d": 3.37,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/briese-focus-220",
+      "name": "Briese Focus 220",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/briese-focus-220_7.2x4.04.png",
+      "w": 7.2,
+      "d": 4.04,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/briese-focus-330",
+      "name": "Briese Focus 330",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/briese-focus-330_11x6.17.png",
+      "w": 11.0,
+      "d": 6.17,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/china-ball",
+      "name": "China Ball",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/china-ball_2x1.99.png",
+      "w": 2.0,
+      "d": 1.99,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/double-outdoor-spot",
+      "name": "Double Outdoor Spot",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/double-outdoor-spot_2.5x1.75.png",
+      "w": 2.5,
+      "d": 1.75,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/ellipsoidal",
+      "name": "Ellipsoidal",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/ellipsoidal_2.5x0.81.png",
+      "w": 2.5,
+      "d": 0.81,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/flashlight",
+      "name": "Flashlight",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/flashlight_0.3x0.8.png",
+      "w": 0.3,
+      "d": 0.8,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/joker-1600-softube",
+      "name": "Joker 1600 Softube",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/joker-1600-softube_0.57x2.5.png",
+      "w": 0.57,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/joker-200-softube",
+      "name": "Joker 200 Softube",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/joker-200-softube_0.5x2.5.png",
+      "w": 0.5,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/joker-400-softube",
+      "name": "Joker 400 Softube",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/joker-400-softube_0.44x2.5.png",
+      "w": 0.44,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/joker-800-softube",
+      "name": "Joker 800 Softube",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/joker-800-softube_0.57x2.5.png",
+      "w": 0.57,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/lamp-with-shade",
+      "name": "Lamp with Shade",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/lamp-with-shade_1.6x1.59.png",
+      "w": 1.6,
+      "d": 1.59,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/large-pancake",
+      "name": "Large Pancake",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/large-pancake_3x1.46.png",
+      "w": 3.0,
+      "d": 1.46,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/large-softbox",
+      "name": "Large Softbox",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/large-softbox_4x2.26.png",
+      "w": 4.0,
+      "d": 2.26,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/medium-pancake",
+      "name": "Medium Pancake",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/medium-pancake_2x0.98.png",
+      "w": 2.0,
+      "d": 0.98,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mirror",
+      "name": "Mirror",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mirror_2.5x1.91.png",
+      "w": 2.5,
+      "d": 1.91,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-12k-par",
+      "name": "Mole 12K Par",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-12k-par_2.72x3.5.png",
+      "w": 2.72,
+      "d": 3.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-1k-zip-softlite",
+      "name": "Mole 1K Zip Softlite",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-1k-zip-softlite_1.9x2.5.png",
+      "w": 1.9,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-2k-par",
+      "name": "Mole 2K Par",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-2k-par_1.95x2.5.png",
+      "w": 1.95,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-2k-zip-softlite",
+      "name": "Mole 2K Zip Softlite",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-2k-zip-softlite_2.5x1.87.png",
+      "w": 2.5,
+      "d": 1.87,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-5k-par",
+      "name": "Mole 5K Par",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-5k-par_1.84x2.5.png",
+      "w": 1.84,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-6-light-molefay",
+      "name": "Mole 6 Light Molefay",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-6-light-molefay_3.5x3.22.png",
+      "w": 3.5,
+      "d": 3.22,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-6k-molepar",
+      "name": "Mole 6K Molepar",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-6k-molepar_3x2.52.png",
+      "w": 3.0,
+      "d": 2.52,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-9-light-molefay",
+      "name": "Mole 9 Light Molefay",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-9-light-molefay_3.32x4.png",
+      "w": 3.32,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-9k-molepar",
+      "name": "Mole 9K Molepar",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-9k-molepar_3.15x3.5.png",
+      "w": 3.15,
+      "d": 3.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-baby",
+      "name": "Mole Baby",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-baby_1.34x1.6.png",
+      "w": 1.34,
+      "d": 1.6,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-junior",
+      "name": "Mole Junior",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-junior_1.82x2.png",
+      "w": 1.82,
+      "d": 2.0,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-par-64",
+      "name": "Mole Par 64",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-par-64_1.14x2.5.png",
+      "w": 1.14,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-skypan-5k-open-face",
+      "name": "Mole SkyPan 5K Open Face",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-skypan-5k-open-face_3x1.57.png",
+      "w": 3.0,
+      "d": 1.57,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/mole-tweenie",
+      "name": "Mole Tweenie",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/mole-tweenie_0.93x1.2.png",
+      "w": 0.93,
+      "d": 1.2,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/molebeam-10k",
+      "name": "Molebeam 10K",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/molebeam-10k_4x3.5.png",
+      "w": 4.0,
+      "d": 3.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/molebeam-20k",
+      "name": "Molebeam 20K",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/molebeam-20k_4.5x4.01.png",
+      "w": 4.5,
+      "d": 4.01,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/molebeam-5k",
+      "name": "Molebeam 5K",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/molebeam-5k_2.5x2.16.png",
+      "w": 2.5,
+      "d": 2.16,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/single-outdoor-spot",
+      "name": "Single Outdoor Spot",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/single-outdoor-spot_1.55x2.5.png",
+      "w": 1.55,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/small-softbox",
+      "name": "Small Softbox",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/small-softbox_2x1.13.png",
+      "w": 2.0,
+      "d": 1.13,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/spacelight",
+      "name": "Spacelight",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/spacelight_3.99x4.png",
+      "w": 3.99,
+      "d": 4.0,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/street-light",
+      "name": "Street Light",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/street-light_0.3x1.5.png",
+      "w": 0.3,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/street-light-mercury-vapor",
+      "name": "Street Light Mercury Vapor",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/street-light-mercury-vapor_0.3x1.5.png",
+      "w": 0.3,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/street-light-sodium-vapor",
+      "name": "Street Light Sodium Vapor",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/street-light-sodium-vapor_0.3x1.5.png",
+      "w": 0.3,
+      "d": 1.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/triolet",
+      "name": "Triolet",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/triolet_1.89x2.5.png",
+      "w": 1.89,
+      "d": 2.5,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/wall-mount-utility-light",
+      "name": "Wall Mount Utility Light",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/wall-mount-utility-light_2.5x1.18.png",
+      "w": 2.5,
+      "d": 1.18,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/wall-mount-utility-mercury-vapor",
+      "name": "Wall Mount Utility Mercury Vapor",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/wall-mount-utility-mercury-vapor_2.5x1.26.png",
+      "w": 2.5,
+      "d": 1.26,
+      "tint": "none"
+    },
+    {
+      "id": "tungsten-fixtures-and-others/wall-mount-utility-sodium-vapor",
+      "name": "Wall Mount Utility Sodium Vapor",
+      "category": "Tungsten & Practicals",
+      "file": "tungsten-fixtures-and-others/wall-mount-utility-sodium-vapor_2.5x1.25.png",
+      "w": 2.5,
+      "d": 1.25,
+      "tint": "none"
+    },
+    {
+      "id": "vehicles/bicycle_1.7x5.8",
+      "name": "Bicycle",
+      "category": "Vehicles",
+      "file": "vehicles/bicycle_1.7x5.8.png",
+      "w": 1.7,
+      "d": 5.8,
+      "tint": "light"
+    },
+    {
+      "id": "vehicles/motorcycle_2.2x7",
+      "name": "Motorcycle",
+      "category": "Vehicles",
+      "file": "vehicles/motorcycle_2.2x7.png",
+      "w": 2.2,
+      "d": 7,
+      "tint": "light"
+    },
+    {
+      "id": "vehicles/pickup_6.5x17",
+      "name": "Pickup",
+      "category": "Vehicles",
+      "file": "vehicles/pickup_6.5x17.png",
+      "w": 6.5,
+      "d": 17,
+      "tint": "light"
+    },
+    {
+      "id": "vehicles/sedan_6x15",
+      "name": "Sedan",
+      "category": "Vehicles",
+      "file": "vehicles/sedan_6x15.png",
+      "w": 6,
+      "d": 15,
+      "tint": "light"
+    },
+    {
+      "id": "vehicles/suv_6.5x16",
+      "name": "Suv",
+      "category": "Vehicles",
+      "file": "vehicles/suv_6.5x16.png",
+      "w": 6.5,
+      "d": 16,
+      "tint": "light"
+    },
+    {
+      "id": "vehicles/van_7x18",
+      "name": "Van",
+      "category": "Vehicles",
+      "file": "vehicles/van_7x18.png",
+      "w": 7,
+      "d": 18,
+      "tint": "light"
+    }
+  ]
+}
