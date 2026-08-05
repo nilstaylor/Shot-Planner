@@ -69,10 +69,10 @@ const sensorHeights = {
 };
 
 const framingPresets = [
-  { id: "shot", label: "Shot camera", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.57 } },
-  { id: "low", label: "Low angle", controls: { orbit: 0, raise: -2.7, dolly: -12, focus: 0.68 } },
-  { id: "eye", label: "Eye line", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.58 } },
-  { id: "high", label: "High angle", controls: { orbit: 0, raise: 4.8, dolly: 10, focus: 0.43 } },
+  { id: "shot", label: "Shot camera", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.84 } },
+  { id: "low", label: "Low angle", controls: { orbit: 0, raise: -2.7, dolly: -12, focus: 0.78 } },
+  { id: "eye", label: "Eye line", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.84 } },
+  { id: "high", label: "High angle", controls: { orbit: 0, raise: 4.8, dolly: 10, focus: 0.66 } },
   { id: "overhead", label: "Overhead", controls: { orbit: 0, raise: 10, dolly: 35, focus: 0.18 } },
 ];
 
@@ -81,7 +81,7 @@ const defaultControls = (shot) => ({
   raise: 0,
   dolly: 0,
   focal: clamp(Number(shot?.cam?.focal) || 35, 18, 135),
-  focus: 0.57,
+  focus: 0.84,
   aspect: shot?.cam?.previsAspect || "2.39",
   motionProgress: 0,
 });
@@ -94,6 +94,25 @@ const previewFrame = (width, height, aspectId) => {
   }
   const frameHeight = Math.round(width / aspect);
   return { x: 0, y: Math.round((height - frameHeight) / 2), width, height: frameHeight, aspect };
+};
+
+const shotScaleFromDescription = (description = "") => {
+  const text = String(description).toUpperCase();
+  return ["ECU", "BCU", "CU", "MCU", "MS", "MLS", "WS", "EWS"].find((code) => new RegExp(`\\b${code}\\b`).test(text)) || "MS";
+};
+
+const frameHeightForShot = (description = "") => {
+  const frameHeights = {
+    ECU: 0.9,
+    BCU: 2.7,
+    CU: 3.3,
+    MCU: 4.1,
+    MS: 5.1,
+    MLS: 6.4,
+    WS: 8.2,
+    EWS: 12,
+  };
+  return frameHeights[shotScaleFromDescription(description)] || frameHeights.MS;
 };
 
 function material(color, options = {}) {
@@ -139,53 +158,77 @@ function makeActor(actor, isSubject = false) {
   const hair = material(appearance.hairColor.color, { roughness: 0.96 });
   const shoe = material("#151d25", { roughness: 0.92 });
   const accent = material(palette.amber, { roughness: 0.45, metalness: 0.1 });
+  const eyeWhite = material("#e9eef0", { roughness: 0.6 });
+  const iris = material("#314553", { roughness: 0.42, metalness: 0.05 });
+  const brow = material(appearance.hairColor.color, { roughness: 0.9 });
+  const lip = material(appearance.skin.id === "deep" ? "#9b5b57" : "#a85e59", { roughness: 0.74 });
 
-  // A deliberately readable, anatomically proportioned previs figure.
-  addMesh(group, new THREE.SphereGeometry(0.14 * scale, 12, 8), shoe, [-0.16 * scale, 0.12 * scale, 0.05 * scale]);
-  addMesh(group, new THREE.SphereGeometry(0.14 * scale, 12, 8), shoe, [0.16 * scale, 0.12 * scale, 0.05 * scale]);
-  addCylinderBetween(
-    group,
-    new THREE.Vector3(-0.16 * scale, 0.18 * scale, 0),
-    new THREE.Vector3(-0.16 * scale, 2.35 * scale, 0),
-    0.12 * scale * silhouette,
-    garmentDark
-  );
-  addCylinderBetween(
-    group,
-    new THREE.Vector3(0.16 * scale, 0.18 * scale, 0),
-    new THREE.Vector3(0.16 * scale, 2.35 * scale, 0),
-    0.12 * scale * silhouette,
-    garmentDark
-  );
-  addMesh(group, new THREE.SphereGeometry(0.3 * scale * silhouette, 12, 8), garment, [0, 2.42 * scale, 0]);
-  addMesh(
-    group,
-    appearance.gender === "female"
-      ? new THREE.ConeGeometry(0.48 * scale * silhouette, 1.35 * scale, 7)
-      : new THREE.CylinderGeometry(0.42 * scale * silhouette, 0.49 * scale * silhouette, 1.55 * scale, 10),
-    garment,
-    [0, 3.16 * scale, 0]
-  );
-  addMesh(group, new THREE.CylinderGeometry(0.36 * scale * silhouette, 0.42 * scale * silhouette, 0.72 * scale, 10), garmentDark, [0, 4.1 * scale, 0]);
+  // Rounded anatomical proportions read as people at both close and wide previs distances.
   for (const side of [-1, 1]) {
+    addMesh(group, new THREE.CapsuleGeometry(0.105 * scale, 0.22 * scale, 6, 10), shoe, [side * 0.16 * scale, 0.14 * scale, 0.08 * scale], [0, 0, Math.PI / 2]);
     addCylinderBetween(
       group,
-      new THREE.Vector3(side * 0.42 * scale * silhouette, 3.85 * scale, 0),
-      new THREE.Vector3(side * 0.66 * scale * silhouette, 2.62 * scale, -0.02 * scale),
-      0.115 * scale,
-      garmentDark
+      new THREE.Vector3(side * 0.16 * scale, 0.22 * scale, 0),
+      new THREE.Vector3(side * 0.17 * scale, 1.35 * scale, -0.015 * scale),
+      0.12 * scale * silhouette,
+      garmentDark,
+      14
     );
     addCylinderBetween(
       group,
-      new THREE.Vector3(side * 0.66 * scale * silhouette, 2.62 * scale, -0.02 * scale),
-      new THREE.Vector3(side * 0.7 * scale * silhouette, 2.25 * scale, -0.07 * scale),
-      0.09 * scale,
-      skin
+      new THREE.Vector3(side * 0.17 * scale, 1.35 * scale, -0.015 * scale),
+      new THREE.Vector3(side * 0.15 * scale, 2.45 * scale, 0),
+      0.135 * scale * silhouette,
+      garmentDark,
+      14
     );
+    addMesh(group, new THREE.SphereGeometry(0.14 * scale * silhouette, 14, 10), garmentDark, [side * 0.17 * scale, 1.35 * scale, -0.015 * scale]);
   }
-  addMesh(group, new THREE.CylinderGeometry(0.11 * scale, 0.11 * scale, 0.18 * scale, 8), skin, [0, 4.48 * scale, 0]);
-  addMesh(group, new THREE.SphereGeometry(0.36 * scale, 18, 14), skin, [0, 4.78 * scale, 0]);
-  const headY = 4.89 * scale;
+  addMesh(group, new THREE.SphereGeometry(0.34 * scale * silhouette, 16, 12), garment, [0, 2.38 * scale, 0]);
+  const torso = addMesh(
+    group,
+    new THREE.CapsuleGeometry(0.42 * scale * silhouette, 0.9 * scale, 8, 14),
+    garment,
+    [0, 3.34 * scale, 0]
+  );
+  torso.scale.set(1, 1, 0.82);
+  addMesh(group, new THREE.SphereGeometry(0.43 * scale * silhouette, 16, 12), garment, [0, 3.92 * scale, 0]);
+  for (const side of [-1, 1]) {
+    addMesh(group, new THREE.SphereGeometry(0.18 * scale, 12, 10), garment, [side * 0.44 * scale * silhouette, 3.94 * scale, 0]);
+    addCylinderBetween(
+      group,
+      new THREE.Vector3(side * 0.46 * scale * silhouette, 3.87 * scale, 0),
+      new THREE.Vector3(side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale),
+      0.12 * scale,
+      garment,
+      14
+    );
+    addMesh(group, new THREE.SphereGeometry(0.12 * scale, 12, 10), garment, [side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale]);
+    addCylinderBetween(
+      group,
+      new THREE.Vector3(side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale),
+      new THREE.Vector3(side * 0.7 * scale * silhouette, 2.42 * scale, -0.1 * scale),
+      0.09 * scale,
+      skin,
+      12
+    );
+    addMesh(group, new THREE.SphereGeometry(0.105 * scale, 12, 10), skin, [side * 0.7 * scale * silhouette, 2.35 * scale, -0.1 * scale]);
+  }
+  addMesh(group, new THREE.CapsuleGeometry(0.105 * scale, 0.14 * scale, 6, 10), skin, [0, 4.43 * scale, 0]);
+  const headY = 4.84 * scale;
+  const head = addMesh(group, new THREE.SphereGeometry(0.36 * scale, 24, 18), skin, [0, headY, 0]);
+  head.scale.set(0.92, 1.1, 0.92);
+  for (const side of [-1, 1]) {
+    addMesh(group, new THREE.SphereGeometry(0.07 * scale, 12, 10), skin, [side * 0.34 * scale, headY, 0]);
+  }
+  const faceZ = -0.325 * scale;
+  for (const side of [-1, 1]) {
+    addMesh(group, new THREE.SphereGeometry(0.048 * scale, 12, 10), eyeWhite, [side * 0.115 * scale, 4.9 * scale, faceZ]);
+    addMesh(group, new THREE.SphereGeometry(0.024 * scale, 10, 8), iris, [side * 0.115 * scale, 4.9 * scale, -0.369 * scale]);
+    addMesh(group, new THREE.BoxGeometry(0.12 * scale, 0.022 * scale, 0.02 * scale), brow, [side * 0.115 * scale, 5.02 * scale, -0.345 * scale], [0, 0, side * -0.14]);
+  }
+  addMesh(group, new THREE.SphereGeometry(0.04 * scale, 10, 8), skin, [0, 4.82 * scale, -0.36 * scale]);
+  addMesh(group, new THREE.BoxGeometry(0.12 * scale, 0.025 * scale, 0.02 * scale), lip, [0, 4.67 * scale, -0.35 * scale]);
   if (appearance.hairStyle === "long" || appearance.hairStyle === "braids") {
     addMesh(group, new THREE.SphereGeometry(0.39 * scale, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, [0, headY, 0.06 * scale]);
     if (appearance.hairStyle === "long") {
@@ -417,8 +460,9 @@ function shotCamera(shot, subject, controls, timelineDuration = 0) {
   const fov = THREE.MathUtils.radToDeg(2 * Math.atan(sensorHeight / (2 * focal)));
   const subjectHeight = Math.max(4, Number(subject?.height) || 5.9);
   const camera = cameraAtMotionProgress(shot.cam, controls.motionProgress, timelineDuration);
+  const focus = typeof controls.focus === "number" ? controls.focus : 0.84;
   const subjectTarget = subject
-    ? vec(subject, clamp(subjectHeight * (Number(controls.focus) || 0.57), 0.6, subjectHeight - 0.25))
+    ? vec(subject, clamp(subjectHeight * focus, 0.6, subjectHeight - 0.25))
     : new THREE.Vector3(0, 2.7, 0);
   const hasMotionPath = motionMarksForCamera(shot.cam).length > 1;
   const trackToSubject = Boolean(shot.cam?.aim && shot.cam?.linkTo && subject);
@@ -429,13 +473,25 @@ function shotCamera(shot, subject, controls, timelineDuration = 0) {
     Number(camera?.y || 0) - Math.cos(heading) * 10
   );
   const target = hasMotionPath && !trackToSubject ? manualTarget : subjectTarget;
-  const base = vec(camera, Math.max(0.5, Number(shot.cam.height) || 5.4));
-  const baseDirection = base.clone().sub(target);
-  const radius = Math.max(3, Math.hypot(baseDirection.x, baseDirection.z)) * (1 + (Number(controls.dolly) || 0) / 100);
+  const plannedRadius = Math.hypot((Number(camera?.x) || 0) - target.x, (Number(camera?.y) || 0) - target.z);
+  const desiredFrameHeight = frameHeightForShot(shot.description);
+  const neutralRadius = clamp(
+    (desiredFrameHeight / (2 * Math.tan((fov * RAD) / 2))) * 1.12,
+    3.8,
+    32
+  );
+  const baseRadius = plannedRadius
+    ? clamp(plannedRadius, neutralRadius * 0.9, neutralRadius * 1.35)
+    : neutralRadius;
+  const radius = Math.max(2.5, baseRadius * (1 + (Number(controls.dolly) || 0) / 100));
+  const baseDirection = new THREE.Vector3((Number(camera?.x) || 0) - target.x, 0, (Number(camera?.y) || 0) - target.z);
+  if (baseDirection.lengthSq() < 0.01) {
+    baseDirection.set(Math.sin(heading || Math.PI), 0, Math.cos(heading || Math.PI));
+  }
   const angle = Math.atan2(baseDirection.x, baseDirection.z) + (Number(controls.orbit) || 0) * RAD;
   const position = new THREE.Vector3(
     target.x + Math.sin(angle) * radius,
-    Math.max(0.35, base.y + (Number(controls.raise) || 0)),
+    Math.max(0.35, target.y + (Number(controls.raise) || 0)),
     target.z + Math.cos(angle) * radius
   );
   return { fov: clamp(fov, 12, 95), position, target, focal, distance: position.distanceTo(target) };
@@ -604,18 +660,18 @@ function drawFallbackPrevis(canvas, shot, objects, walls = [], openings = [], co
     });
   });
   objects.filter((object) => object.type === "actor").forEach((actor) => {
-        const appearance = appearanceForActor(actor);
-        const height = Math.max(4.2, appearance.height);
+    const appearance = appearanceForActor(actor);
+    const actorHeight = Math.max(4.2, appearance.height);
     items.push({
-      depth: vec(actor, height / 2).distanceTo(framing.position),
+      depth: vec(actor, actorHeight / 2).distanceTo(framing.position),
       priority: actor.id === subject?.id ? 2 : 1,
       draw: () => {
         const rawFeet = project(vec(actor, 0.05));
-        const rawShoulders = project(vec(actor, height * 0.67));
-        const rawHead = project(vec(actor, height * 0.86));
+        const rawShoulders = project(vec(actor, actorHeight * 0.67));
+        const rawHead = project(vec(actor, actorHeight * 0.86));
         const rawFigureHeight = rawFeet && rawHead ? Math.abs(rawFeet.y - rawHead.y) : 0;
         const composed = composedActorPoints(actor);
-        const useComposed = !rawFeet || !rawShoulders || !rawHead || rawFigureHeight < 50 || rawFigureHeight > height * 0.72;
+        const useComposed = actor.id === subject?.id || !rawFeet || !rawShoulders || !rawHead || rawFigureHeight < 50 || rawFigureHeight > height * 0.72;
         const feet = useComposed ? composed.feet : rawFeet;
         const shoulders = useComposed ? composed.shoulders : rawShoulders;
         const head = useComposed ? composed.head : rawHead;
@@ -653,14 +709,13 @@ function drawFallbackPrevis(canvas, shot, objects, walls = [], openings = [], co
         ctx.fillRect(x - torsoWidth * 0.34, torsoBottom - bodyHeight * 0.26, torsoWidth * 0.68, bodyHeight * 0.28);
         ctx.fillStyle = garment;
         ctx.beginPath();
-        if (appearance.gender === "male") {
-          ctx.roundRect(x - torsoWidth / 2, shoulderY, torsoWidth, torsoBottom - shoulderY, torsoWidth * 0.12);
-        } else {
-          ctx.moveTo(x, shoulderY);
-          ctx.lineTo(x - torsoWidth * 0.62, torsoBottom);
-          ctx.lineTo(x + torsoWidth * 0.62, torsoBottom);
-          ctx.closePath();
-        }
+        ctx.roundRect(
+          x - torsoWidth * (appearance.gender === "female" ? 0.46 : 0.5),
+          shoulderY,
+          torsoWidth * (appearance.gender === "female" ? 0.92 : 1),
+          torsoBottom - shoulderY,
+          torsoWidth * 0.18
+        );
         ctx.fill();
         ctx.strokeStyle = selected ? palette.amber : "#d9ebf1";
         ctx.lineWidth = selected ? 2.2 : 1;
@@ -674,6 +729,29 @@ function drawFallbackPrevis(canvas, shot, objects, walls = [], openings = [], co
         ctx.beginPath();
         ctx.arc(x, headY + headRadius * 1.15, headRadius, 0, Math.PI * 2);
         ctx.fill();
+        if (headRadius >= 10) {
+          ctx.fillStyle = "#edf2f1";
+          for (const side of [-1, 1]) {
+            ctx.beginPath();
+            ctx.arc(x + side * headRadius * 0.34, headY + headRadius * 1.11, headRadius * 0.16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#334856";
+            ctx.beginPath();
+            ctx.arc(x + side * headRadius * 0.34, headY + headRadius * 1.11, headRadius * 0.075, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#edf2f1";
+          }
+          ctx.fillStyle = appearance.skin.color;
+          ctx.beginPath();
+          ctx.ellipse(x, headY + headRadius * 1.34, headRadius * 0.09, headRadius * 0.13, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = appearance.skin.id === "deep" ? "#9b5b57" : "#a85e59";
+          ctx.lineWidth = Math.max(1, headRadius * 0.06);
+          ctx.beginPath();
+          ctx.moveTo(x - headRadius * 0.2, headY + headRadius * 1.58);
+          ctx.lineTo(x + headRadius * 0.2, headY + headRadius * 1.58);
+          ctx.stroke();
+        }
         ctx.fillStyle = appearance.hairColor.color;
         ctx.beginPath();
         ctx.arc(x, headY + headRadius, headRadius * (appearance.hairStyle === "curly" ? 1.2 : 1.05), Math.PI, Math.PI * 2);
@@ -786,12 +864,14 @@ export function renderPrevisFrame({ shot, objects, walls = [], openings = [], wi
 }
 
 export default function PrevisWindow({ shot, objects, walls = [], openings = [], onUpdateCamera, onClose }) {
+  const stageRef = useRef(null);
   const canvasRef = useRef(null);
   const runtimeRef = useRef(null);
   const controlsRef = useRef(defaultControls(shot));
   const dragRef = useRef(null);
   const motionFrameRef = useRef(null);
   const [controls, setControls] = useState(() => defaultControls(shot));
+  const [frameBox, setFrameBox] = useState(null);
   const [fallback, setFallback] = useState(false);
   const [activePreset, setActivePreset] = useState("shot");
   const [motionPlaying, setMotionPlaying] = useState(false);
@@ -826,6 +906,29 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
     controlsRef.current = controls;
     runtimeRef.current?.render();
   }, [controls]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return undefined;
+    const measureFrame = () => {
+      const { width, height } = stage.getBoundingClientRect();
+      if (!width || !height) return;
+      const next = previewFrame(width, height, controls.aspect);
+      setFrameBox((current) => (
+        current &&
+        current.x === next.x &&
+        current.y === next.y &&
+        current.width === next.width &&
+        current.height === next.height
+          ? current
+          : next
+      ));
+    };
+    const observer = new ResizeObserver(measureFrame);
+    observer.observe(stage);
+    measureFrame();
+    return () => observer.disconnect();
+  }, [controls.aspect]);
 
   useEffect(() => {
     if (!motionPlaying || !hasMotionPath) return undefined;
@@ -907,14 +1010,11 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
         if (!width || !height) return;
         renderer.setSize(width, height, false);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        const frame = previewFrame(width, height, controlsRef.current.aspect);
         renderer.setScissorTest(false);
         renderer.setClearColor("#02060a", 1);
         renderer.clear();
-        renderer.setScissorTest(true);
-        renderer.setViewport(frame.x, frame.y, frame.width, frame.height);
-        renderer.setScissor(frame.x, frame.y, frame.width, frame.height);
-        camera.aspect = frame.aspect;
+        renderer.setViewport(0, 0, width, height);
+        camera.aspect = width / height;
         const motionObjects = animatePerformersAtProgress(objects, controlsRef.current.motionProgress, choreographyDuration);
         sceneState.actorMeshes.forEach((actorMesh, actorId) => {
           const actor = motionObjects.find((object) => object.id === actorId);
@@ -944,7 +1044,6 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
       if (runtimeRef.current) runtimeRef.current = null;
       if (sceneState?.scene) disposeScene(sceneState.scene);
       renderer?.dispose();
-      renderer?.forceContextLoss?.();
     };
   }, [choreographyDuration, fallback, objects, walls, openings, shot, subject]);
 
@@ -993,6 +1092,9 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
   };
 
   const activeAspect = aspectRatioFor(controls.aspect);
+  const previewStageStyle = frameBox
+    ? { left: frameBox.x, top: frameBox.y, width: frameBox.width, height: frameBox.height }
+    : { inset: 0 };
 
   return (
     <div
@@ -1030,28 +1132,30 @@ export default function PrevisWindow({ shot, objects, walls = [], openings = [],
         </header>
 
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="relative min-h-[21rem] bg-[#08111b] lg:min-h-[34rem]">
-            <canvas
-              key={fallback ? "cinematic-canvas" : "three-renderer"}
-              ref={canvasRef}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
-              className="absolute inset-0 h-full w-full touch-none"
-              style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
-              data-testid="canvas-3d-previs"
-            />
-            <div className="pointer-events-none absolute inset-6 border" style={{ borderColor: "rgba(241, 175, 76, 0.5)" }} />
-            <div className="pointer-events-none absolute inset-x-6 top-1/3 border-t border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
-            <div className="pointer-events-none absolute inset-x-6 bottom-1/3 border-t border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
-            <div className="pointer-events-none absolute inset-y-6 left-1/3 border-l border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
-            <div className="pointer-events-none absolute inset-y-6 right-1/3 border-l border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
-            <div className="absolute left-4 top-4 rounded-md px-3 py-2 text-[11px] font-semibold tracking-wide" style={{ background: "rgba(5, 15, 23, 0.8)", color: palette.cyan, border: "1px solid rgba(104, 216, 219, 0.35)" }}>
-              {fallback ? "CINEMATIC CANVAS" : "LIVE 3D"} · {activeAspect.label} · {activePreset === "custom" ? "CUSTOM VIEW" : activePreset.toUpperCase()}
-            </div>
-            <div className="absolute bottom-4 left-4 rounded-md px-3 py-2 text-xs" style={{ background: "rgba(5, 15, 23, 0.82)", color: palette.dim, border: `1px solid ${palette.rule}` }}>
-              Drag to orbit and crane · Lens {Math.round(controls.focal)}mm · Focus {Math.round(controls.focus * 100)}%
+          <div ref={stageRef} className="relative min-h-[21rem] overflow-hidden bg-[#02060a] lg:min-h-[34rem]" data-testid="previs-render-stage">
+            <div className="absolute overflow-hidden" style={previewStageStyle} data-testid="previs-aspect-frame">
+              <canvas
+                key={fallback ? "cinematic-canvas" : "three-renderer"}
+                ref={canvasRef}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                className="absolute inset-0 h-full w-full touch-none"
+                style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+                data-testid="canvas-3d-previs"
+              />
+              <div className="pointer-events-none absolute inset-6 border" style={{ borderColor: "rgba(241, 175, 76, 0.5)" }} />
+              <div className="pointer-events-none absolute inset-x-6 top-1/3 border-t border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+              <div className="pointer-events-none absolute inset-x-6 bottom-1/3 border-t border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+              <div className="pointer-events-none absolute inset-y-6 left-1/3 border-l border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+              <div className="pointer-events-none absolute inset-y-6 right-1/3 border-l border-dashed" style={{ borderColor: "rgba(241, 175, 76, 0.3)" }} />
+              <div className="absolute left-4 top-4 rounded-md px-3 py-2 text-[11px] font-semibold tracking-wide" style={{ background: "rgba(5, 15, 23, 0.8)", color: palette.cyan, border: "1px solid rgba(104, 216, 219, 0.35)" }}>
+                {fallback ? "CINEMATIC CANVAS" : "LIVE 3D"} · {activeAspect.label} · {activePreset === "custom" ? "CUSTOM VIEW" : activePreset.toUpperCase()}
+              </div>
+              <div className="absolute bottom-4 left-4 rounded-md px-3 py-2 text-xs" style={{ background: "rgba(5, 15, 23, 0.82)", color: palette.dim, border: `1px solid ${palette.rule}` }}>
+                Drag to orbit and crane · Lens {Math.round(controls.focal)}mm · Focus {Math.round(controls.focus * 100)}%
+              </div>
             </div>
           </div>
 
