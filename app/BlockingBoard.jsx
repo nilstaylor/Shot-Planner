@@ -282,20 +282,21 @@ const stencilMatchesPalette = (stencil, focus) => {
   return true;
 };
 
-const PAPER = {
-  ink: "#f4f2ed",
+const GREY18 = {
+  // Neutral mid-grey keeps blocking marks honest while giving the board a calibrated studio feel.
+  ink: "#777777",
   panel: "#151d26",
   panelHi: "#1d2833",
-  rule: "#cec9bc",
-  ruleSoft: "#e4dfd4",
-  text: "#1c2732",
-  dim: "#6b7681",
-  camera: "#a9640c",
-  cameraSoft: "rgba(169,100,12,0.14)",
-  actor: "#0d6f66",
-  prop: "#5b7286",
-  bad: "#bf262b",
-  select: "#101418",
+  rule: "rgba(18,24,30,0.48)",
+  ruleSoft: "rgba(250,248,243,0.16)",
+  text: "#11161b",
+  dim: "#26313a",
+  camera: "#703900",
+  cameraSoft: "rgba(112,57,0,0.22)",
+  actor: "#07554e",
+  prop: "#30485c",
+  bad: "#811721",
+  select: "#fbfaf5",
 };
 
 const COLORS = {
@@ -448,11 +449,11 @@ function heightNote(h) {
 let seq = 0;
 const uid = (p) => `${p}${Date.now().toString(36)}${++seq}`;
 
-const newActor = (x, y, name, gender = "female", profileId = null) => {
+const newActor = (x, y, name, gender = "female", profileId = null, objectId = uid("a")) => {
   const appearance = profilePatch(profileId || (gender === "male" ? "marcus" : "maya"));
   return withLayerDefaults(
     {
-      id: uid("a"),
+      id: objectId,
       type: "actor",
       name,
       x,
@@ -492,10 +493,10 @@ const newCamera = (x, y, name, extra = {}) =>
     extra.layerContext || DIRECTOR
   );
 
-const newProp = (x, y, name, st = null, layerContext = DIRECTOR) =>
+const newProp = (x, y, name, st = null, layerContext = DIRECTOR, objectId = uid("p")) =>
   withLayerDefaults(
     {
-      id: uid("p"),
+      id: objectId,
       type: "prop",
       name,
       x,
@@ -512,11 +513,12 @@ const newProp = (x, y, name, st = null, layerContext = DIRECTOR) =>
   );
 
 const STARTER = () => {
-  const a = newActor(-4, 0, "ANNA", "female");
-  const b = newActor(4, 0, "BEN", "male");
+  // Stable starter IDs prevent server/client hydration drift on the initial scene.
+  const a = newActor(-4, 0, "ANNA", "female", null, "starter-anna");
+  const b = newActor(4, 0, "BEN", "male", null, "starter-ben");
   a.rot = 90;
   b.rot = 270;
-  const table = newProp(0, 0, "Table", FALLBACK_STENCILS[0]);
+  const table = newProp(0, 0, "Table", FALLBACK_STENCILS[0], DIRECTOR, "starter-table");
   return [a, b, table];
 };
 
@@ -534,7 +536,7 @@ export default function BlockingBoard() {
   const [view, setView] = useState({ x: 0, y: 0, scale: 16 });
   const [line, setLine] = useState({ on: true, auto: true, a: null, b: null, side: 1 });
   const [showCones, setShowCones] = useState(true);
-  const [paper, setPaper] = useState(true);
+  const [grey18, setGrey18] = useState(true);
   const [pane, setPane] = useState("shots");
   const [wallTool, setWallTool] = useState("select");
   const [wallDraft, setWallDraft] = useState(null);
@@ -2202,7 +2204,7 @@ ${previs}
     () => walls.flatMap((wall) => wallSegments(wall, openings).map((segment) => ({ wall, ...segment }))),
     [walls, openings]
   );
-  const C = paper ? PAPER : COLORS;
+  const C = grey18 ? GREY18 : COLORS;
   const px = (n) => n / view.scale; // stroke widths that stay constant on screen
 
   const lineGeo = () => {
@@ -2283,7 +2285,13 @@ ${previs}
           Undo
         </Btn>
         <div className="flex-1" />
-        <Btn onClick={() => setPaper((v) => !v)}>{paper ? "Paper" : "Dark"}</Btn>
+        <Btn
+          onClick={() => setGrey18((v) => !v)}
+          title="Switch between the neutral 18% grey floor-plan canvas and a dark canvas"
+          data-testid="button-canvas-tone"
+        >
+          Canvas: {grey18 ? "18% grey" : "Dark"}
+        </Btn>
         <Btn onClick={() => setShowCones((s) => !s)} active={showCones}>
           Field of view {showCones ? "on" : "off"}
         </Btn>
@@ -2792,7 +2800,7 @@ ${previs}
                         preserveAspectRatio="none"
                         style={{
                           pointerEvents: "none",
-                          filter: o.tint === "light" && !paper ? "invert(1)" : "none",
+                          filter: o.tint === "light" && !grey18 ? "invert(1)" : "none",
                           opacity: 0.92,
                         }}
                       />
