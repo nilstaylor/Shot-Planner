@@ -186,12 +186,20 @@ function makeActor(actor, isSubject = false) {
   const height = Math.max(4.2, appearance.height);
   const scale = height / 5.9;
   const silhouette = appearance.build === "broad" ? 1.16 : appearance.build === "lean" ? 0.88 : 1;
+  const faceProfiles = {
+    oval: { width: 0.92, height: 1.13, jaw: 0.78, chin: 0.74, cheek: 0.91 },
+    round: { width: 1.03, height: 1.04, jaw: 0.9, chin: 0.83, cheek: 1.06 },
+    square: { width: 1.04, height: 1.08, jaw: 1.02, chin: 0.94, cheek: 0.97 },
+    heart: { width: 0.94, height: 1.13, jaw: 0.72, chin: 0.67, cheek: 1.0 },
+  };
+  const face = faceProfiles[appearance.faceShape] || faceProfiles.oval;
   const garment = material(appearance.wardrobe.color, { roughness: 0.85 });
   const garmentDark = material(appearance.wardrobe.accent, { roughness: 0.86 });
   const skin = material(appearance.skin.color, { roughness: 0.94 });
   const skinShade = material(colorVariant(appearance.skin.color, 0.78), { roughness: 0.96 });
   const hair = material(appearance.hairColor.color, { roughness: 0.96 });
   const hairHighlight = material(colorVariant(appearance.hairColor.color, 1.28), { roughness: 0.9 });
+  const hairShade = material(colorVariant(appearance.hairColor.color, 0.7), { roughness: 0.98 });
   const shoe = material("#151d25", { roughness: 0.92 });
   const accent = material(palette.amber, { roughness: 0.45, metalness: 0.1 });
   const garmentHighlight = material(colorVariant(appearance.wardrobe.color, 1.16), { roughness: 0.78 });
@@ -200,6 +208,7 @@ function makeActor(actor, isSubject = false) {
   const eyeSocket = material(colorVariant(appearance.skin.color, 0.62), { roughness: 0.96 });
   const brow = material(appearance.hairColor.color, { roughness: 0.9 });
   const lip = material(appearance.skin.id === "deep" ? "#9b5b57" : "#a85e59", { roughness: 0.74 });
+  const beard = material(colorVariant(appearance.hairColor.color, 0.62), { roughness: 1 });
 
   // Rounded anatomical proportions read as people at both close and wide previs distances.
   for (const side of [-1, 1]) {
@@ -233,7 +242,8 @@ function makeActor(actor, isSubject = false) {
   );
   torso.scale.set(1, 1, 0.8);
   addMesh(group, new THREE.SphereGeometry(0.44 * scale * silhouette, 18, 14), garment, [0, 3.92 * scale, 0]);
-  addMesh(group, new THREE.BoxGeometry(0.09 * scale, 1.0 * scale, 0.025 * scale), garmentHighlight, [0, 3.42 * scale, -0.36 * scale]);
+  addMesh(group, new THREE.BoxGeometry(0.072 * scale, 1.0 * scale, 0.025 * scale), garmentHighlight, [0, 3.42 * scale, -0.36 * scale]);
+  addMesh(group, new THREE.TorusGeometry(0.36 * scale * silhouette, 0.025 * scale, 8, 24, Math.PI), garmentDark, [0, 4.04 * scale, -0.03 * scale], [0, 0, Math.PI]);
   for (const side of [-1, 1]) {
     addMesh(group, new THREE.SphereGeometry(0.185 * scale, 14, 12), garment, [side * 0.44 * scale * silhouette, 3.94 * scale, 0]);
     addTaperedCylinderBetween(
@@ -260,26 +270,51 @@ function makeActor(actor, isSubject = false) {
   addMesh(group, new THREE.CapsuleGeometry(0.11 * scale, 0.16 * scale, 8, 12), skin, [0, 4.43 * scale, 0]);
   const headY = 4.84 * scale;
   const head = addMesh(group, new THREE.SphereGeometry(0.365 * scale, 28, 22), skin, [0, headY, 0]);
-  head.scale.set(0.93, 1.12, 0.94);
+  head.scale.set(face.width, face.height, 0.94);
   const jaw = addMesh(group, new THREE.SphereGeometry(0.285 * scale, 22, 16), skin, [0, 4.67 * scale, -0.012 * scale]);
-  jaw.scale.set(0.92, 0.62, 0.86);
+  jaw.scale.set(face.jaw, 0.62, 0.86);
+  const chin = addMesh(group, new THREE.SphereGeometry(0.11 * scale, 14, 10), skinShade, [0, 4.54 * scale, -0.09 * scale]);
+  chin.scale.set(face.chin, 0.62, 0.66);
   for (const side of [-1, 1]) {
-    addMesh(group, new THREE.SphereGeometry(0.07 * scale, 14, 12), skin, [side * 0.345 * scale, headY, 0]);
-    addMesh(group, new THREE.SphereGeometry(0.034 * scale, 10, 8), skinShade, [side * 0.365 * scale, headY, -0.01 * scale]);
+    const cheek = addMesh(group, new THREE.SphereGeometry(0.125 * scale, 14, 10), skinShade, [side * 0.175 * scale * face.cheek, 4.76 * scale, -0.3 * scale]);
+    cheek.scale.set(1.08, 0.64, 0.3);
+  }
+  for (const side of [-1, 1]) {
+    addMesh(group, new THREE.SphereGeometry(0.07 * scale, 14, 12), skin, [side * 0.345 * scale * face.width, headY, 0]);
+    addMesh(group, new THREE.SphereGeometry(0.034 * scale, 10, 8), skinShade, [side * 0.365 * scale * face.width, headY, -0.01 * scale]);
+    addMesh(group, new THREE.TorusGeometry(0.034 * scale, 0.012 * scale, 6, 12, Math.PI), skinShade, [side * 0.365 * scale * face.width, headY, -0.052 * scale], [Math.PI / 2, 0, side * Math.PI / 2]);
   }
   const faceZ = -0.345 * scale;
   for (const side of [-1, 1]) {
-    const socket = addMesh(group, new THREE.SphereGeometry(0.072 * scale, 14, 10), eyeSocket, [side * 0.12 * scale, 4.91 * scale, -0.315 * scale]);
+    const socket = addMesh(group, new THREE.SphereGeometry(0.072 * scale, 14, 10), eyeSocket, [side * 0.12 * scale * face.width, 4.91 * scale, -0.315 * scale]);
     socket.scale.set(1.2, 0.58, 0.34);
-    const eye = addMesh(group, new THREE.SphereGeometry(0.052 * scale, 14, 10), eyeWhite, [side * 0.12 * scale, 4.9 * scale, faceZ]);
+    const eye = addMesh(group, new THREE.SphereGeometry(0.052 * scale, 14, 10), eyeWhite, [side * 0.12 * scale * face.width, 4.9 * scale, faceZ]);
     eye.scale.set(1.08, 0.72, 0.48);
-    addMesh(group, new THREE.SphereGeometry(0.026 * scale, 12, 10), iris, [side * 0.12 * scale, 4.9 * scale, -0.382 * scale]);
-    addMesh(group, new THREE.BoxGeometry(0.13 * scale, 0.024 * scale, 0.022 * scale), brow, [side * 0.12 * scale, 5.02 * scale, -0.36 * scale], [0, 0, side * -0.14]);
+    addMesh(group, new THREE.SphereGeometry(0.026 * scale, 12, 10), iris, [side * 0.12 * scale * face.width, 4.9 * scale, -0.382 * scale]);
+    addMesh(group, new THREE.BoxGeometry(0.13 * scale, 0.024 * scale, 0.022 * scale), brow, [side * 0.12 * scale * face.width, 5.02 * scale, -0.36 * scale], [0, 0, side * -0.14]);
+    addMesh(group, new THREE.BoxGeometry(0.088 * scale, 0.014 * scale, 0.018 * scale), skinShade, [side * 0.12 * scale * face.width, 4.83 * scale, -0.365 * scale], [0, 0, side * 0.04]);
   }
-  addMesh(group, new THREE.ConeGeometry(0.055 * scale, 0.12 * scale, 10), skinShade, [0, 4.82 * scale, -0.375 * scale], [-Math.PI / 2, 0, 0]);
-  addMesh(group, new THREE.SphereGeometry(0.043 * scale, 12, 10), skin, [0, 4.78 * scale, -0.382 * scale]);
+  addMesh(group, new THREE.CapsuleGeometry(0.037 * scale, 0.105 * scale, 6, 10), skinShade, [0, 4.84 * scale, -0.36 * scale], [Math.PI / 2, 0, 0]);
+  addMesh(group, new THREE.SphereGeometry(0.05 * scale, 12, 10), skin, [0, 4.77 * scale, -0.405 * scale]);
+  for (const side of [-1, 1]) {
+    addMesh(group, new THREE.SphereGeometry(0.018 * scale, 10, 8), skinShade, [side * 0.038 * scale, 4.77 * scale, -0.435 * scale]);
+  }
   addMesh(group, new THREE.BoxGeometry(0.13 * scale, 0.022 * scale, 0.022 * scale), lip, [0, 4.65 * scale, -0.365 * scale]);
-  addMesh(group, new THREE.BoxGeometry(0.08 * scale, 0.02 * scale, 0.018 * scale), skinShade, [0, 4.56 * scale, -0.35 * scale]);
+  addMesh(group, new THREE.BoxGeometry(0.072 * scale, 0.016 * scale, 0.018 * scale), skinShade, [0, 4.56 * scale, -0.35 * scale]);
+  if (appearance.facialHair === "stubble") {
+    const stubble = addMesh(group, new THREE.SphereGeometry(0.255 * scale, 18, 12), beard, [0, 4.66 * scale, -0.23 * scale]);
+    stubble.scale.set(face.jaw * 0.9, 0.45, 0.62);
+  } else if (appearance.facialHair === "moustache") {
+    for (const side of [-1, 1]) {
+      addMesh(group, new THREE.SphereGeometry(0.052 * scale, 12, 8), beard, [side * 0.052 * scale, 4.69 * scale, -0.39 * scale]);
+    }
+  } else if (appearance.facialHair === "goatee") {
+    addMesh(group, new THREE.CapsuleGeometry(0.05 * scale, 0.1 * scale, 5, 8), beard, [0, 4.59 * scale, -0.36 * scale]);
+  } else if (appearance.facialHair === "short-beard" || appearance.facialHair === "close-beard") {
+    const beardMask = addMesh(group, new THREE.SphereGeometry(0.275 * scale, 18, 12), beard, [0, 4.66 * scale, -0.21 * scale]);
+    beardMask.scale.set(face.jaw, appearance.facialHair === "close-beard" ? 0.54 : 0.66, 0.7);
+    addMesh(group, new THREE.BoxGeometry(0.13 * scale, 0.035 * scale, 0.024 * scale), beard, [0, 4.69 * scale, -0.394 * scale]);
+  }
   if (appearance.hairStyle === "long" || appearance.hairStyle === "braids") {
     addMesh(group, new THREE.SphereGeometry(0.39 * scale, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, [0, headY, 0.06 * scale]);
     if (appearance.hairStyle === "long") {

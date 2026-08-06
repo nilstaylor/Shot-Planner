@@ -26,6 +26,8 @@ test("a cast profile produces scene-safe appearance fields", () => {
     "height",
     "previsBuild",
     "previsCharacter",
+    "previsFaceShape",
+    "previsFacialHair",
     "previsHairColor",
     "previsHairStyle",
     "previsSkinTone",
@@ -35,6 +37,8 @@ test("a cast profile produces scene-safe appearance fields", () => {
   assert.equal(appearance.profile.label, "Maya");
   assert.equal(appearance.wardrobe.label, "Formal");
   assert.equal(appearance.hairStyle, "bun");
+  assert.equal(appearance.faceShape, "heart");
+  assert.equal(appearance.facialHair, "none");
   assert.ok(appearance.height > 4);
 });
 
@@ -43,6 +47,8 @@ test("previs appearance choices and cinematic formats remain extensible", () => 
   assert.ok(PREVIS_SKIN_TONES.length >= 6);
   assert.ok(PREVIS_HAIR_COLORS.length >= 5);
   assert.ok(PREVIS_HAIR_STYLES.length >= 8);
+  assert.equal(new Set(PREVIS_CAST.map((person) => person.faceShape)).size, 4);
+  assert.ok(PREVIS_CAST.some((person) => person.facialHair === "close-beard"));
   assert.deepEqual(PREVIS_ASPECT_RATIOS.map((format) => format.id), ["1.33", "1.66", "1.78", "1.85", "2.00", "2.39"]);
   assert.equal(aspectRatioFor("2.39").value, 2.39);
   assert.equal(aspectRatioFor("missing").id, "2.39");

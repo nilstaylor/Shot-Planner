@@ -36,18 +36,18 @@ export const PREVIS_HAIR_STYLES = [
 ];
 
 export const PREVIS_CAST = [
-  { id: "marcus", label: "Marcus", gender: "male", height: 6.15, build: "broad", skinTone: "deep", hairColor: "black", hairStyle: "buzz", wardrobe: "formal" },
-  { id: "elias", label: "Elias", gender: "male", height: 5.95, build: "lean", skinTone: "light", hairColor: "brown", hairStyle: "wave", wardrobe: "casual" },
-  { id: "daniel", label: "Daniel", gender: "male", height: 5.8, build: "average", skinTone: "warm", hairColor: "black", hairStyle: "crop", wardrobe: "workwear" },
-  { id: "theo", label: "Theo", gender: "male", height: 5.7, build: "lean", skinTone: "fair", hairColor: "auburn", hairStyle: "curly", wardrobe: "bright" },
-  { id: "jonah", label: "Jonah", gender: "male", height: 6.05, build: "average", skinTone: "tan", hairColor: "brown", hairStyle: "crop", wardrobe: "outerwear" },
-  { id: "victor", label: "Victor", gender: "male", height: 5.9, build: "broad", skinTone: "brown", hairColor: "silver", hairStyle: "wave", wardrobe: "evening" },
-  { id: "maya", label: "Maya", gender: "female", height: 5.65, build: "average", skinTone: "warm", hairColor: "black", hairStyle: "long", wardrobe: "casual" },
-  { id: "nora", label: "Nora", gender: "female", height: 5.75, build: "lean", skinTone: "fair", hairColor: "blonde", hairStyle: "bun", wardrobe: "formal" },
-  { id: "ava", label: "Ava", gender: "female", height: 5.55, build: "average", skinTone: "brown", hairColor: "black", hairStyle: "braids", wardrobe: "bright" },
-  { id: "june", label: "June", gender: "female", height: 5.45, build: "lean", skinTone: "light", hairColor: "auburn", hairStyle: "pixie", wardrobe: "workwear" },
-  { id: "sofia", label: "Sofia", gender: "female", height: 5.7, build: "average", skinTone: "tan", hairColor: "brown", hairStyle: "wave", wardrobe: "evening" },
-  { id: "tessa", label: "Tessa", gender: "female", height: 5.85, build: "broad", skinTone: "deep", hairColor: "black", hairStyle: "curly", wardrobe: "outerwear" },
+  { id: "marcus", label: "Marcus", gender: "male", height: 6.15, build: "broad", skinTone: "deep", hairColor: "black", hairStyle: "buzz", wardrobe: "formal", faceShape: "square", facialHair: "close-beard" },
+  { id: "elias", label: "Elias", gender: "male", height: 5.95, build: "lean", skinTone: "light", hairColor: "brown", hairStyle: "wave", wardrobe: "casual", faceShape: "oval", facialHair: "stubble" },
+  { id: "daniel", label: "Daniel", gender: "male", height: 5.8, build: "average", skinTone: "warm", hairColor: "black", hairStyle: "crop", wardrobe: "workwear", faceShape: "round", facialHair: "moustache" },
+  { id: "theo", label: "Theo", gender: "male", height: 5.7, build: "lean", skinTone: "fair", hairColor: "auburn", hairStyle: "curly", wardrobe: "bright", faceShape: "heart", facialHair: "none" },
+  { id: "jonah", label: "Jonah", gender: "male", height: 6.05, build: "average", skinTone: "tan", hairColor: "brown", hairStyle: "crop", wardrobe: "outerwear", faceShape: "square", facialHair: "short-beard" },
+  { id: "victor", label: "Victor", gender: "male", height: 5.9, build: "broad", skinTone: "brown", hairColor: "silver", hairStyle: "wave", wardrobe: "evening", faceShape: "round", facialHair: "goatee" },
+  { id: "maya", label: "Maya", gender: "female", height: 5.65, build: "average", skinTone: "warm", hairColor: "black", hairStyle: "long", wardrobe: "casual", faceShape: "heart", facialHair: "none" },
+  { id: "nora", label: "Nora", gender: "female", height: 5.75, build: "lean", skinTone: "fair", hairColor: "blonde", hairStyle: "bun", wardrobe: "formal", faceShape: "oval", facialHair: "none" },
+  { id: "ava", label: "Ava", gender: "female", height: 5.55, build: "average", skinTone: "brown", hairColor: "black", hairStyle: "braids", wardrobe: "bright", faceShape: "round", facialHair: "none" },
+  { id: "june", label: "June", gender: "female", height: 5.45, build: "lean", skinTone: "light", hairColor: "auburn", hairStyle: "pixie", wardrobe: "workwear", faceShape: "heart", facialHair: "none" },
+  { id: "sofia", label: "Sofia", gender: "female", height: 5.7, build: "average", skinTone: "tan", hairColor: "brown", hairStyle: "wave", wardrobe: "evening", faceShape: "oval", facialHair: "none" },
+  { id: "tessa", label: "Tessa", gender: "female", height: 5.85, build: "broad", skinTone: "deep", hairColor: "black", hairStyle: "curly", wardrobe: "outerwear", faceShape: "square", facialHair: "none" },
 ];
 
 export const PREVIS_ASPECT_RATIOS = [
@@ -80,6 +80,8 @@ export function appearanceForActor(actor) {
     hairColor: hairColorFor(actor.previsHairColor || profile.hairColor),
     hairStyle: actor.previsHairStyle || profile.hairStyle,
     wardrobe: wardrobeFor(actor.previsWardrobe || profile.wardrobe),
+    faceShape: actor.previsFaceShape || profile.faceShape || "oval",
+    facialHair: actor.previsFacialHair || profile.facialHair || "none",
   };
 }
 
@@ -94,5 +96,7 @@ export function profilePatch(profileId) {
     previsHairColor: profile.hairColor,
     previsHairStyle: profile.hairStyle,
     previsWardrobe: profile.wardrobe,
+    previsFaceShape: profile.faceShape || "oval",
+    previsFacialHair: profile.facialHair || "none",
   };
 }
