@@ -45,6 +45,15 @@ test("3D preview begins level unless a vertical aim or tracked target is explici
   assert.match(source, /camera\.setViewOffset\(frame\.width, frame\.height, 0, verticalOffset, frame\.width, frame\.height\)/);
 });
 
+test("cinematic format changes derive the visible frame from the current format in the same render", async () => {
+  const source = await readFile(previsUrl, "utf8");
+
+  assert.match(source, /const \[stageSize, setStageSize\] = useState\(null\)/);
+  assert.match(source, /const displayFrame = stageSize && previewFrame\(stageSize\.width, stageSize\.height, controls\.aspect\)/);
+  assert.match(source, /const previewStageStyle = displayFrame/);
+  assert.doesNotMatch(source, /const \[frameBox, setFrameBox\] = useState\(null\)/);
+});
+
 test("a newly added camera starts with the same performer target in 2D and 3D", async () => {
   const source = await readFile(boardUrl, "utf8");
 

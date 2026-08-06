@@ -1034,7 +1034,7 @@ export default function PrevisWindow({
   const motionFrameRef = useRef(null);
   const wheelCommitRef = useRef(null);
   const [controls, setControls] = useState(() => defaultControls(shot));
-  const [frameBox, setFrameBox] = useState(null);
+  const [stageSize, setStageSize] = useState(null);
   const [fallback, setFallback] = useState(false);
   const [activePreset, setActivePreset] = useState(() => shot?.cam?.previsPreset || "shot");
   const [motionPlaying, setMotionPlaying] = useState(false);
@@ -1075,25 +1075,23 @@ export default function PrevisWindow({
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return undefined;
-    const measureFrame = () => {
+    const measureStage = () => {
       const { width, height } = stage.getBoundingClientRect();
       if (!width || !height) return;
-      const next = previewFrame(width, height, controls.aspect);
-      setFrameBox((current) => (
+      const next = { width, height };
+      setStageSize((current) => (
         current &&
-        current.x === next.x &&
-        current.y === next.y &&
         current.width === next.width &&
         current.height === next.height
           ? current
           : next
       ));
     };
-    const observer = new ResizeObserver(measureFrame);
+    const observer = new ResizeObserver(measureStage);
     observer.observe(stage);
-    measureFrame();
+    measureStage();
     return () => observer.disconnect();
-  }, [controls.aspect]);
+  }, []);
 
   useEffect(() => {
     if (!motionPlaying || !hasMotionPath) return undefined;
@@ -1354,8 +1352,9 @@ export default function PrevisWindow({
   }, [fallback, onWheel]);
 
   const activeAspect = aspectRatioFor(controls.aspect);
-  const previewStageStyle = frameBox
-    ? { left: frameBox.x, top: frameBox.y, width: frameBox.width, height: frameBox.height }
+  const displayFrame = stageSize && previewFrame(stageSize.width, stageSize.height, controls.aspect);
+  const previewStageStyle = displayFrame
+    ? { left: displayFrame.x, top: displayFrame.y, width: displayFrame.width, height: displayFrame.height }
     : { inset: 0 };
 
   return (
