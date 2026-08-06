@@ -282,21 +282,20 @@ const stencilMatchesPalette = (stencil, focus) => {
   return true;
 };
 
-const GREY18 = {
-  // Neutral mid-grey keeps blocking marks honest while giving the board a calibrated studio feel.
-  ink: "#777777",
+const WHITE = {
+  ink: "#ffffff",
   panel: "#151d26",
   panelHi: "#1d2833",
-  rule: "rgba(18,24,30,0.48)",
-  ruleSoft: "rgba(250,248,243,0.16)",
-  text: "#11161b",
-  dim: "#26313a",
-  camera: "#703900",
-  cameraSoft: "rgba(112,57,0,0.22)",
-  actor: "#07554e",
-  prop: "#30485c",
-  bad: "#811721",
-  select: "#fbfaf5",
+  rule: "#c6ccd2",
+  ruleSoft: "#e7ebee",
+  text: "#1c2732",
+  dim: "#5f6b76",
+  camera: "#a9640c",
+  cameraSoft: "rgba(169,100,12,0.14)",
+  actor: "#0d6f66",
+  prop: "#5b7286",
+  bad: "#bf262b",
+  select: "#101418",
 };
 
 const COLORS = {
@@ -536,7 +535,7 @@ export default function BlockingBoard() {
   const [view, setView] = useState({ x: 0, y: 0, scale: 16 });
   const [line, setLine] = useState({ on: true, auto: true, a: null, b: null, side: 1 });
   const [showCones, setShowCones] = useState(true);
-  const [grey18, setGrey18] = useState(true);
+  const [whiteCanvas, setWhiteCanvas] = useState(true);
   const [pane, setPane] = useState("shots");
   const [wallTool, setWallTool] = useState("select");
   const [wallDraft, setWallDraft] = useState(null);
@@ -2204,7 +2203,7 @@ ${previs}
     () => walls.flatMap((wall) => wallSegments(wall, openings).map((segment) => ({ wall, ...segment }))),
     [walls, openings]
   );
-  const C = grey18 ? GREY18 : COLORS;
+  const C = whiteCanvas ? WHITE : COLORS;
   const px = (n) => n / view.scale; // stroke widths that stay constant on screen
 
   const lineGeo = () => {
@@ -2286,11 +2285,11 @@ ${previs}
         </Btn>
         <div className="flex-1" />
         <Btn
-          onClick={() => setGrey18((v) => !v)}
-          title="Switch between the neutral 18% grey floor-plan canvas and a dark canvas"
+          onClick={() => setWhiteCanvas((v) => !v)}
+          title="Switch between the white floor-plan canvas and dark mode"
           data-testid="button-canvas-tone"
         >
-          Canvas: {grey18 ? "18% grey" : "Dark"}
+          Canvas: {whiteCanvas ? "White" : "Dark"}
         </Btn>
         <Btn onClick={() => setShowCones((s) => !s)} active={showCones}>
           Field of view {showCones ? "on" : "off"}
@@ -2800,7 +2799,7 @@ ${previs}
                         preserveAspectRatio="none"
                         style={{
                           pointerEvents: "none",
-                          filter: o.tint === "light" && !grey18 ? "invert(1)" : "none",
+                          filter: o.tint === "light" && !whiteCanvas ? "invert(1)" : "none",
                           opacity: 0.92,
                         }}
                       />
