@@ -17,7 +17,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 export const metadata: Metadata = {
   title: "Shot Planner",
   description:
-    "A top-down camera blocking and shot-planning tool for film directors.",
+    "An overhead camera blocking and shot-list planning tool for film directors.",
   icons: {
     icon: `${basePath}/favicon.svg`,
     shortcut: `${basePath}/favicon.svg`,

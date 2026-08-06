@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import PrevisWindow, { renderPrevisFrame } from "./PrevisWindow";
 import {
   CINEMATOGRAPHY,
   DIRECTOR,
@@ -17,15 +16,6 @@ import {
   MAX_SHARE_URL_LENGTH,
   sceneFromShareHash,
 } from "./sceneShare";
-import {
-  PREVIS_CAST,
-  PREVIS_HAIR_COLORS,
-  PREVIS_HAIR_STYLES,
-  PREVIS_SKIN_TONES,
-  PREVIS_WARDROBES,
-  PREVIS_ASPECT_RATIOS,
-  profilePatch,
-} from "./previsCast";
 import {
   motionPathDuration,
   motionPathSvg,
@@ -448,21 +438,19 @@ function heightNote(h) {
 let seq = 0;
 const uid = (p) => `${p}${Date.now().toString(36)}${++seq}`;
 
-const newActor = (x, y, name, gender = "female", profileId = null, objectId = uid("a")) => {
-  const appearance = profilePatch(profileId || (gender === "male" ? "marcus" : "maya"));
-  return withLayerDefaults(
+const newActor = (x, y, name, gender = "female", objectId = uid("a")) =>
+  withLayerDefaults(
     {
       id: objectId,
       type: "actor",
       name,
+      gender,
       x,
       y,
       rot: 180,
-      ...appearance,
     },
     DIRECTOR
   );
-};
 
 const newCamera = (x, y, name, extra = {}) =>
   withLayerDefaults(
@@ -485,7 +473,6 @@ const newCamera = (x, y, name, extra = {}) =>
       aim: true,
       color: "#e8a33d",
       showFov: true,
-      previsAspect: "2.39",
       motionPath: [],
       ...extra,
     },
@@ -513,8 +500,8 @@ const newProp = (x, y, name, st = null, layerContext = DIRECTOR, objectId = uid(
 
 const STARTER = () => {
   // Stable starter IDs prevent server/client hydration drift on the initial scene.
-  const a = newActor(-4, 0, "ANNA", "female", null, "starter-anna");
-  const b = newActor(4, 0, "BEN", "male", null, "starter-ben");
+  const a = newActor(-4, 0, "ANNA", "female", "starter-anna");
+  const b = newActor(4, 0, "BEN", "male", "starter-ben");
   a.rot = 90;
   b.rot = 270;
   const table = newProp(0, 0, "Table", FALLBACK_STENCILS[0], DIRECTOR, "starter-table");
@@ -544,8 +531,6 @@ export default function BlockingBoard() {
   const [snap, setSnap] = useState({ grid: true, nodes: true, lines: true, angles: true });
   const [wallDefaults, setWallDefaults] = useState({ thickness: 0.32, style: "solid" });
   const [blueprint, setBlueprint] = useState(null);
-  const [previewShot, setPreviewShot] = useState(null);
-  const [includePrevisInPrint, setIncludePrevisInPrint] = useState(false);
   const [shareDialog, setShareDialog] = useState(null);
   const [layerMode, setLayerMode] = useState(DIRECTOR);
   const [cinematographyDisplay, setCinematographyDisplay] = useState("hide");
@@ -1726,7 +1711,7 @@ export default function BlockingBoard() {
     // level, 20 ft leaves a full performer comfortably inside the Scope
     // frame instead of cutting them at the lower matte. Users can still
     // place or move it anywhere afterward. When performers are present, bind
-    // the new camera to the nearest one so its 2D FOV and 3D preview begin
+    // the new camera to the nearest one so its field-of-view guide begins
     // from the same deliberate target relationship.
     const defaultCameraOffset = 20;
     const nearestActor = actors.reduce(
@@ -2064,7 +2049,7 @@ export default function BlockingBoard() {
 
   /* A shot list a 1st AD would recognize: scene header, slate column, one row per
      setup, camera letter only where a second camera is on the same setup. */
-  const buildShotListHtml = (previsFrames = []) => {
+  const buildShotListHtml = () => {
     const esc = (s) =>
       String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
     const rows = shots
@@ -2084,20 +2069,6 @@ export default function BlockingBoard() {
       </tr>`
       )
       .join("\n");
-    const previs = previsFrames.length
-      ? `<section class="previs-page">
-          <div class="previs-title">3D previs frames</div>
-          <div class="previs-grid">${previsFrames
-            .map(
-              (frame) => `<figure class="previs-card">
-                <img src="${frame.image}" alt="3D previs for setup ${esc(frame.slate)}">
-                <figcaption><strong>${esc(frame.slate)}</strong>${frame.camLetter ? ` <span class="cam">${esc(frame.camLetter)}</span>` : ""} · ${esc(frame.description)}</figcaption>
-              </figure>`
-            )
-            .join("")}</div>
-        </section>`
-      : "";
-
     return `<!doctype html><html><head><meta charset="utf-8">
 <title>Shot list, scene ${esc(meta.scene)}</title>
 <style>
@@ -2127,12 +2098,6 @@ export default function BlockingBoard() {
   .flag td { background: #f6f6f6; }
   tfoot td { border-bottom: none; border-top: 1px solid #999; font-weight: 700; padding-top: 8px; }
   .foot { margin-top: 18px; font-size: 9px; color: #777; display: flex; justify-content: space-between; }
-  .previs-page { break-before: page; page-break-before: always; }
-  .previs-title { font-size: 16px; font-weight: 700; border-bottom: 2px solid #111; padding-bottom: 7px; margin-bottom: 12px; }
-  .previs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .previs-card { margin: 0; break-inside: avoid; page-break-inside: avoid; border: 1px solid #bbb; padding: 6px; }
-  .previs-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: #111820; }
-  .previs-card figcaption { font-size: 9px; line-height: 1.35; margin-top: 5px; }
 </style></head><body>
 <div class="head">
   <div>
@@ -2160,7 +2125,6 @@ export default function BlockingBoard() {
     }</td>
   </tr></tfoot>
 </table>
-${previs}
 <div class="foot">
   <span>Setup letters skip I and O. A second camera on the same setup shares the slate and is marked by camera letter.</span>
   <span>${new Date().toLocaleDateString()}</span>
@@ -2169,15 +2133,7 @@ ${previs}
   };
 
   const printShotList = () => {
-    const previsFrames = includePrevisInPrint
-      ? shots.map((shot) => ({
-          image: renderPrevisFrame({ shot, objects, walls, openings }),
-          slate: shot.slate,
-          camLetter: shot.multicam ? shot.camLetter : "",
-          description: shot.description,
-        }))
-      : [];
-    const html = buildShotListHtml(previsFrames);
+    const html = buildShotListHtml();
     const w = window.open("", "_blank");
     if (w) {
       w.document.write(html);
@@ -2274,22 +2230,11 @@ ${previs}
             Shot Planner
           </div>
           <div className="text-xs" style={{ color: COLORS.dim }}>
-            top down camera plan
+            overhead blocking & shot lists
           </div>
         </div>
         <Btn onClick={addActor}>Add performer</Btn>
         <Btn onClick={addCamera} data-testid="button-add-camera">Add camera</Btn>
-        <Btn
-          onClick={() => {
-            const currentShot = shots.at(-1);
-            if (currentShot) setPreviewShot(currentShot);
-          }}
-          disabled={shots.length === 0}
-          accent
-          data-testid="button-open-3d-previs"
-        >
-          Open 3D preview
-        </Btn>
         <Btn onClick={() => setPane("stencils")}>Set pieces</Btn>
         <Btn
           onClick={() => switchLayerWorkspace(layerMode === DIRECTOR ? CINEMATOGRAPHY : DIRECTOR)}
@@ -2344,20 +2289,12 @@ ${previs}
             className="px-2 py-1 rounded text-xs font-medium cursor-pointer list-none"
             style={{ background: COLORS.panelHi, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
           >
-            File & output
+            Files & shot list
           </summary>
           <div
             className="absolute right-0 top-full mt-2 z-20 w-56 p-2 rounded grid gap-2 shadow-xl"
             style={{ background: COLORS.panel, border: `1px solid ${COLORS.rule}` }}
           >
-            <label className="flex items-center gap-2 px-1 text-xs" style={{ color: COLORS.dim }}>
-              <input
-                type="checkbox"
-                checked={includePrevisInPrint}
-                onChange={(e) => setIncludePrevisInPrint(e.target.checked)}
-              />
-              Include 3D previs frames in PDF
-            </label>
             <Btn onClick={printShotList} accent>Print / save PDF</Btn>
             <Btn onClick={exportShotList}>Export CSV</Btn>
             <Btn onClick={openShareDialog} accent data-testid="button-share-scene">Share scene</Btn>
@@ -3125,9 +3062,17 @@ ${previs}
           <div className="flex-1 overflow-y-auto p-4 space-y-5">
             {pane === "shots" && (
               <>
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: COLORS.camera }}>
+                    Shot list
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: COLORS.dim }}>
+                    Each overhead camera becomes a production-ready setup. Select a row to edit its lens, subject, movement, support, timing, and notes.
+                  </p>
+                </div>
                 {shots.length === 0 && (
                   <p className="text-xs" style={{ color: COLORS.dim }}>
-                    No shots yet. Add a camera, then select it to choose its subject, lens, movement, and color.
+                    No shots yet. Add a camera to create the first setup, then select it to plan lens, subject, movement, support, timing, and notes.
                   </p>
                 )}
                 {shots.map((s) => {
@@ -3136,8 +3081,9 @@ ${previs}
                     <div
                     key={s.cam.id}
                     onClick={() => {
-                      if (shotEditable) setSelected(s.cam.id);
-                      setPreviewShot(s);
+                      if (!shotEditable) return;
+                      setSelected(s.cam.id);
+                      setPane("object");
                     }}
                     className="p-2 rounded cursor-pointer"
                     style={{
@@ -3629,15 +3575,7 @@ ${previs}
                   </span>
                   . Letters I and O are skipped, and after Z they double to AA, BB.
                 </p>
-                <div className="pt-1 space-y-2">
-                  <label className="flex items-center gap-2 text-xs" style={{ color: COLORS.dim }}>
-                    <input
-                      type="checkbox"
-                      checked={includePrevisInPrint}
-                      onChange={(e) => setIncludePrevisInPrint(e.target.checked)}
-                    />
-                    Include 3D previs frames in PDF
-                  </label>
+                <div className="pt-1">
                   <Btn onClick={printShotList} accent>
                     Print / save PDF
                   </Btn>
@@ -3791,15 +3729,6 @@ ${previs}
 
                 {sel.type === "camera" && (
                   <>
-                    <Btn
-                      onClick={() => {
-                        const shot = shots.find((s) => s.cam.id === sel.id);
-                        if (shot) setPreviewShot(shot);
-                      }}
-                      accent
-                    >
-                      Open 3D previs
-                    </Btn>
                     <Field label="Lens">
                       <select
                         value={sel.focal}
@@ -3823,21 +3752,6 @@ ${previs}
                       >
                         {Object.keys(SENSORS).map((k) => (
                           <option key={k}>{k}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Previs format">
-                      <select
-                        value={sel.previsAspect || "2.39"}
-                        onChange={(e) => patch(sel.id, { previsAspect: e.target.value })}
-                        data-testid="select-previs-aspect"
-                        className="w-full px-2 py-1 rounded text-sm"
-                        style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
-                      >
-                        {PREVIS_ASPECT_RATIOS.map((format) => (
-                          <option key={format.id} value={format.id}>
-                            {format.label}
-                          </option>
                         ))}
                       </select>
                     </Field>
@@ -4262,85 +4176,6 @@ ${previs}
                         )}
                       </div>
                     </details>
-                    <Field label="Stock cast profile">
-                      <select
-                        value={sel.previsCharacter || (sel.gender === "male" ? "marcus" : "maya")}
-                        onChange={(e) => patch(sel.id, profilePatch(e.target.value))}
-                        data-testid="select-previs-character"
-                        className="w-full px-2 py-1 rounded text-sm"
-                        style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
-                      >
-                        <optgroup label="Male cast">
-                          {PREVIS_CAST.filter((person) => person.gender === "male").map((person) => (
-                            <option key={person.id} value={person.id}>{person.label}</option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Female cast">
-                          {PREVIS_CAST.filter((person) => person.gender === "female").map((person) => (
-                            <option key={person.id} value={person.id}>{person.label}</option>
-                          ))}
-                        </optgroup>
-                      </select>
-                    </Field>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Field label="Wardrobe">
-                        <select
-                          value={sel.previsWardrobe || "casual"}
-                          onChange={(e) => patch(sel.id, { previsWardrobe: e.target.value })}
-                          data-testid="select-previs-wardrobe"
-                          className="w-full px-2 py-1 rounded text-sm"
-                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
-                        >
-                          {PREVIS_WARDROBES.map((wardrobe) => <option key={wardrobe.id} value={wardrobe.id}>{wardrobe.label}</option>)}
-                        </select>
-                      </Field>
-                      <Field label="Build">
-                        <select
-                          value={sel.previsBuild || "average"}
-                          onChange={(e) => patch(sel.id, { previsBuild: e.target.value })}
-                          data-testid="select-previs-build"
-                          className="w-full px-2 py-1 rounded text-sm"
-                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
-                        >
-                          <option value="lean">Lean</option>
-                          <option value="average">Average</option>
-                          <option value="broad">Broad</option>
-                        </select>
-                      </Field>
-                      <Field label="Skin tone">
-                        <select
-                          value={sel.previsSkinTone || "warm"}
-                          onChange={(e) => patch(sel.id, { previsSkinTone: e.target.value })}
-                          data-testid="select-previs-skin-tone"
-                          className="w-full px-2 py-1 rounded text-sm"
-                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
-                        >
-                          {PREVIS_SKIN_TONES.map((tone) => <option key={tone.id} value={tone.id}>{tone.label}</option>)}
-                        </select>
-                      </Field>
-                      <Field label="Hair color">
-                        <select
-                          value={sel.previsHairColor || "brown"}
-                          onChange={(e) => patch(sel.id, { previsHairColor: e.target.value })}
-                          data-testid="select-previs-hair-color"
-                          className="w-full px-2 py-1 rounded text-sm"
-                          style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
-                        >
-                          {PREVIS_HAIR_COLORS.map((color) => <option key={color.id} value={color.id}>{color.label}</option>)}
-                        </select>
-                      </Field>
-                    </div>
-                    <Field label="Hair style">
-                      <select
-                        value={sel.previsHairStyle || "wave"}
-                        onChange={(e) => patch(sel.id, { previsHairStyle: e.target.value })}
-                        data-testid="select-previs-hair-style"
-                        className="w-full px-2 py-1 rounded text-sm"
-                        style={{ background: COLORS.ink, color: COLORS.text, border: `1px solid ${COLORS.rule}` }}
-                      >
-                        {PREVIS_HAIR_STYLES.map((style) => <option key={style.id} value={style.id}>{style.label}</option>)}
-                      </select>
-                    </Field>
                     <Field label={`Subject height ${(sel.height || SUBJECT_HEIGHT).toFixed(1)} ft`}>
                       <input
                         type="range"
@@ -4479,20 +4314,6 @@ ${previs}
                     >
                       {target.aim ? "Disable Track To" : "Enable Track To"}
                     </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className={actionClass}
-                      style={{ ...actionStyle, color: COLORS.camera }}
-                      onClick={() => {
-                        const shot = shots.find((item) => item.cam.id === target.id);
-                        if (shot) setPreviewShot(shot);
-                        close();
-                      }}
-                      data-testid="menu-open-camera-previs"
-                    >
-                      Open 3D previs
-                    </button>
                   </>
                 ) : (
                   <>
@@ -4574,22 +4395,6 @@ ${previs}
             );
           })()}
         </div>
-      )}
-      {previewShot && (
-        <PrevisWindow
-          shot={previewShot}
-          objects={objects}
-          walls={walls}
-          openings={openings}
-          onBeginCameraUpdate={(cameraId) => recordUndo(`previs-camera:${cameraId}`)}
-          onUpdateCamera={(cameraId, fields, record = false) => {
-            patch(cameraId, fields, record);
-            setPreviewShot((current) =>
-              current?.cam?.id === cameraId ? { ...current, cam: { ...current.cam, ...fields } } : current
-            );
-          }}
-          onClose={() => setPreviewShot(null)}
-        />
       )}
       {shareDialog && (
         <div

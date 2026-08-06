@@ -54,13 +54,24 @@ test("cinematic format changes derive the visible frame from the current format 
   assert.doesNotMatch(source, /const \[frameBox, setFrameBox\] = useState\(null\)/);
 });
 
-test("a newly added camera starts with the same performer target in 2D and 3D", async () => {
+test("a newly added camera starts aimed at the nearest performer in the overhead plan", async () => {
   const source = await readFile(boardUrl, "utf8");
 
   assert.match(source, /const defaultCameraOffset = 20/);
   assert.match(source, /linkTo: nearestActor\?\.id \|\| null/);
   assert.match(source, /aim: Boolean\(nearestActor\)/);
   assert.match(source, /if \(nearestActor\) o\.rot = Math\.round\(headingOf\(nearestActor\.x - o\.x, nearestActor\.y - o\.y\)\)/);
+});
+
+test("the active planner excludes 3D previs controls and export frames", async () => {
+  const source = await readFile(boardUrl, "utf8");
+
+  assert.doesNotMatch(source, /PrevisWindow|renderPrevisFrame|previewShot|includePrevisInPrint/);
+  assert.doesNotMatch(source, /Open 3D previs|Open 3D preview|3D previs frames/);
+  assert.doesNotMatch(source, /from "\.\/previsCast"/);
+  assert.match(source, /overhead blocking & shot lists/);
+  assert.match(source, /Each overhead camera becomes a production-ready setup/);
+  assert.match(source, /setPane\("object"\)/);
 });
 
 test("context-menu actions remain available while outside clicks close the menu", async () => {

@@ -1,6 +1,6 @@
 # Shot Planner
 
-Shot Planner is a top-down camera blocking and shot-planning tool for film directors. It combines a scaled floor plan, draggable performers and set pieces, camera placement, field-of-view guides, screen-direction checks, and a computed shot list in one workspace.
+Shot Planner is an overhead camera blocking and shot-list planning tool for film directors. It combines a scaled floor plan, draggable performers and set pieces, camera placement, field-of-view guides, screen-direction checks, and a production-ready shot list in one workspace.
 
 **Live app:** https://nilstaylor.github.io/Shot-Planner/
 
@@ -20,15 +20,12 @@ Shot Planner is a top-down camera blocking and shot-planning tool for film direc
 - Context-aware stencil palette with camera rigs, lighting, grip, dolly-track, diffusion, and truss assets exposed in Cinematography mode
 - Lens, sensor, height, movement, support, subject, and optional user-entered planning-minute controls
 - Automatic shot-size and camera-angle descriptions
-- Clickable camera setups with an orbitable 3D previs window
-- Dedicated top-bar 3D preview control, enabled as soon as a camera is added
 - Generic male/female performer representations and dimensional set-object proxies
-- High-, low-, and eye-level previs framing based on the camera height
 - Optional 180-degree line and crossed-line warnings
 - 500+ scaled production stencils
 - Scene save/open using JSON
 - Shot-list export to CSV
-- Printable landscape shot list with optional 3D previs frames for PDF export
+- Printable landscape shot list for PDF export
 - Responsive desktop, tablet, and mobile layouts
 
 ## Requirements
@@ -80,7 +77,6 @@ npm test
 
 - `app/BlockingBoard.jsx` — main application and interaction logic
 - `app/layerSystem.js` — layer migration, render-policy, and stencil-availability rules
-- `app/PrevisWindow.jsx` — interactive Three.js / canvas previs renderer
 - `app/page.tsx` — application entry page
 - `app/layout.tsx` — document shell, fonts, and metadata
 - `app/globals.css` — global styles
