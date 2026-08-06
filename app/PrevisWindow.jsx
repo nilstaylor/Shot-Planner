@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { appearanceForActor, aspectRatioFor, PREVIS_ASPECT_RATIOS } from "./previsCast";
 import { motionPathDuration, sampleMotionPath } from "./motionPath";
@@ -69,21 +69,23 @@ const sensorHeights = {
 };
 
 const framingPresets = [
-  { id: "shot", label: "Shot camera", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.84 } },
-  { id: "low", label: "Low angle", controls: { orbit: 0, raise: -2.7, dolly: -12, focus: 0.78 } },
-  { id: "eye", label: "Eye line", controls: { orbit: 0, raise: 0, dolly: 0, focus: 0.84 } },
-  { id: "high", label: "High angle", controls: { orbit: 0, raise: 4.8, dolly: 10, focus: 0.66 } },
-  { id: "overhead", label: "Overhead", controls: { orbit: 0, raise: 10, dolly: 35, focus: 0.18 } },
+  { id: "shot", label: "Shot camera", controls: { orbit: 0, raise: 0, dolly: 0, tilt: 0, focus: 0.9 } },
+  { id: "low", label: "Low angle", controls: { orbit: 0, raise: -2.7, dolly: -12, tilt: 9, focus: 0.88 } },
+  { id: "eye", label: "Eye line", controls: { orbit: 0, raise: 0, dolly: 0, tilt: 0, focus: 0.9 } },
+  { id: "high", label: "High angle", controls: { orbit: 0, raise: 4.8, dolly: 10, tilt: -13, focus: 0.75 } },
+  { id: "overhead", label: "Overhead", controls: { orbit: 0, raise: 10, dolly: 35, tilt: -34, focus: 0.35 } },
 ];
 
 const defaultControls = (shot) => {
   const savedView = shot?.cam?.previsView || {};
+  const legacyDefaultFocus = savedView.tilt == null && Number(savedView.focus) === 0.84;
   return {
     orbit: clamp(Number(savedView.orbit) || 0, -155, 155),
     raise: clamp(Number(savedView.raise) || 0, -4, 11),
     dolly: clamp(Number(savedView.dolly) || 0, -60, 80),
+    tilt: clamp(Number(savedView.tilt) || 0, -45, 45),
     focal: clamp(Number(savedView.focal ?? shot?.cam?.focal) || 35, 18, 135),
-    focus: clamp(Number(savedView.focus) || 0.84, 0.15, 0.9),
+    focus: clamp(legacyDefaultFocus ? 0.9 : Number(savedView.focus) || 0.9, 0.15, 0.95),
     aspect: shot?.cam?.previsAspect || "2.39",
     motionProgress: 0,
   };
@@ -97,6 +99,7 @@ const cameraFieldsForControls = (controls, preset) => ({
     orbit: +Number(controls.orbit).toFixed(2),
     raise: +Number(controls.raise).toFixed(2),
     dolly: +Number(controls.dolly).toFixed(2),
+    tilt: +Number(controls.tilt).toFixed(2),
     focal: +Number(controls.focal).toFixed(1),
     focus: +Number(controls.focus).toFixed(3),
   },
@@ -210,64 +213,90 @@ function makeActor(actor, isSubject = false) {
   const lip = material(appearance.skin.id === "deep" ? "#9b5b57" : "#a85e59", { roughness: 0.74 });
   const beard = material(colorVariant(appearance.hairColor.color, 0.62), { roughness: 1 });
 
-  // Rounded anatomical proportions read as people at both close and wide previs distances.
+  // Reference-inspired production figures: a relaxed stance with articulated joints,
+  // tapered anatomy and enough facial/wardrobe structure to read at shot-planning scale.
+  const feminine = appearance.gender === "female";
+  const body = {
+    shoulder: (feminine ? 0.39 : 0.48) * silhouette,
+    chest: (feminine ? 0.39 : 0.45) * silhouette,
+    waist: (feminine ? 0.285 : 0.34) * silhouette,
+    hip: (feminine ? 0.39 : 0.345) * silhouette,
+    legOffset: (feminine ? 0.145 : 0.17) * silhouette,
+    arm: (feminine ? 0.095 : 0.112) * silhouette,
+  };
+  const longSleeve = feminine || ["formal", "outerwear", "evening"].includes(appearance.wardrobe.id);
+  const hipY = 2.38 * scale;
+  const kneeY = 1.3 * scale;
+  const shoulderY = 3.9 * scale;
+  const elbowY = 2.98 * scale;
+  const wristY = 2.34 * scale;
+
   for (const side of [-1, 1]) {
-    addMesh(group, new THREE.CapsuleGeometry(0.11 * scale, 0.26 * scale, 7, 12), shoe, [side * 0.16 * scale, 0.14 * scale, 0.09 * scale], [0, 0, Math.PI / 2]);
-    addTaperedCylinderBetween(
+    const ankle = new THREE.Vector3(side * body.legOffset * scale, 0.2 * scale, 0.02 * scale);
+    const knee = new THREE.Vector3(side * (body.legOffset + 0.018) * scale, kneeY, -0.025 * scale);
+    const hip = new THREE.Vector3(side * body.legOffset * scale, hipY, 0.015 * scale);
+    addMesh(
       group,
-      new THREE.Vector3(side * 0.16 * scale, 0.22 * scale, 0),
-      new THREE.Vector3(side * 0.17 * scale, 1.35 * scale, -0.015 * scale),
-      0.105 * scale * silhouette,
-      0.14 * scale * silhouette,
-      garmentDark,
-      14
+      new THREE.BoxGeometry(0.22 * scale, 0.14 * scale, 0.45 * scale),
+      shoe,
+      [side * body.legOffset * scale, 0.11 * scale, -0.13 * scale],
+      [0, 0, 0]
     );
-    addTaperedCylinderBetween(
-      group,
-      new THREE.Vector3(side * 0.17 * scale, 1.35 * scale, -0.015 * scale),
-      new THREE.Vector3(side * 0.15 * scale, 2.45 * scale, 0),
-      0.15 * scale * silhouette,
-      0.18 * scale * silhouette,
-      garmentDark,
-      14
-    );
-    addMesh(group, new THREE.SphereGeometry(0.145 * scale * silhouette, 16, 12), garmentDark, [side * 0.17 * scale, 1.35 * scale, -0.015 * scale]);
+    addMesh(group, new THREE.SphereGeometry(0.11 * scale, 12, 10), shoe, [side * body.legOffset * scale, 0.11 * scale, -0.32 * scale]);
+    addTaperedCylinderBetween(group, ankle, knee, 0.095 * scale * silhouette, 0.135 * scale * silhouette, garmentDark, 16);
+    addMesh(group, new THREE.SphereGeometry(0.145 * scale * silhouette, 18, 14), garmentDark, knee.toArray());
+    addTaperedCylinderBetween(group, knee, hip, 0.135 * scale * silhouette, 0.18 * scale * silhouette, garmentDark, 16);
+    addMesh(group, new THREE.SphereGeometry(0.17 * scale * silhouette, 16, 12), garmentDark, hip.toArray());
   }
-  addMesh(group, new THREE.SphereGeometry(0.35 * scale * silhouette, 18, 14), garment, [0, 2.38 * scale, 0]);
-  const torso = addMesh(
+
+  const pelvis = addMesh(group, new THREE.SphereGeometry(0.5 * scale, 22, 16), garmentDark, [0, 2.42 * scale, 0]);
+  pelvis.scale.set(body.hip / 0.5, 0.68, 0.7);
+  const abdomen = addMesh(
     group,
-    new THREE.CapsuleGeometry(0.43 * scale * silhouette, 0.92 * scale, 10, 18),
+    new THREE.CylinderGeometry(body.chest * scale, body.waist * scale, 0.9 * scale, 20),
     garment,
-    [0, 3.34 * scale, 0]
+    [0, 3.08 * scale, 0]
   );
-  torso.scale.set(1, 1, 0.8);
-  addMesh(group, new THREE.SphereGeometry(0.44 * scale * silhouette, 18, 14), garment, [0, 3.92 * scale, 0]);
-  addMesh(group, new THREE.BoxGeometry(0.072 * scale, 1.0 * scale, 0.025 * scale), garmentHighlight, [0, 3.42 * scale, -0.36 * scale]);
-  addMesh(group, new THREE.TorusGeometry(0.36 * scale * silhouette, 0.025 * scale, 8, 24, Math.PI), garmentDark, [0, 4.04 * scale, -0.03 * scale], [0, 0, Math.PI]);
+  abdomen.scale.z = feminine ? 0.72 : 0.8;
+  const ribcage = addMesh(group, new THREE.SphereGeometry(0.5 * scale, 24, 18), garment, [0, 3.62 * scale, 0]);
+  ribcage.scale.set(body.chest / 0.5, 0.78, feminine ? 0.68 : 0.76);
+  addMesh(
+    group,
+    new THREE.TorusGeometry(body.waist * scale * 0.96, 0.018 * scale, 8, 22),
+    garmentDark,
+    [0, 2.64 * scale, 0],
+    [Math.PI / 2, 0, 0]
+  );
+  addMesh(
+    group,
+    new THREE.BoxGeometry(0.025 * scale, 1.08 * scale, 0.018 * scale),
+    garmentHighlight,
+    [0, 3.3 * scale, -0.34 * scale]
+  );
+
   for (const side of [-1, 1]) {
-    addMesh(group, new THREE.SphereGeometry(0.185 * scale, 14, 12), garment, [side * 0.44 * scale * silhouette, 3.94 * scale, 0]);
-    addTaperedCylinderBetween(
-      group,
-      new THREE.Vector3(side * 0.46 * scale * silhouette, 3.87 * scale, 0),
-      new THREE.Vector3(side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale),
-      0.14 * scale,
-      0.105 * scale,
-      garment,
-      14
-    );
-    addMesh(group, new THREE.SphereGeometry(0.125 * scale, 14, 12), garment, [side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale]);
-    addTaperedCylinderBetween(
-      group,
-      new THREE.Vector3(side * 0.64 * scale * silhouette, 2.95 * scale, -0.03 * scale),
-      new THREE.Vector3(side * 0.7 * scale * silhouette, 2.42 * scale, -0.1 * scale),
-      0.095 * scale,
-      0.075 * scale,
-      skin,
-      12
-    );
-    addMesh(group, new THREE.SphereGeometry(0.11 * scale, 14, 12), skin, [side * 0.7 * scale * silhouette, 2.35 * scale, -0.1 * scale]);
+    const shoulder = new THREE.Vector3(side * body.shoulder * scale, shoulderY, 0);
+    const elbow = new THREE.Vector3(side * (body.shoulder + 0.18) * scale, elbowY, -0.035 * scale);
+    const wrist = new THREE.Vector3(side * (body.shoulder + 0.245) * scale, wristY, -0.12 * scale);
+    addMesh(group, new THREE.SphereGeometry(0.18 * scale, 16, 12), garment, shoulder.toArray());
+    addTaperedCylinderBetween(group, shoulder, elbow, body.arm * scale * 1.22, body.arm * scale, garment, 14);
+    addMesh(group, new THREE.SphereGeometry(0.115 * scale, 14, 12), longSleeve ? garment : skin, elbow.toArray());
+    addTaperedCylinderBetween(group, elbow, wrist, body.arm * scale, body.arm * 0.72 * scale, longSleeve ? garment : skin, 14);
+    const hand = addMesh(group, new THREE.CapsuleGeometry(0.075 * scale, 0.16 * scale, 7, 12), skin, wrist.toArray(), [0, 0, side * 0.1]);
+    hand.scale.set(0.82, 1, 0.62);
+    for (let finger = -1; finger <= 1; finger += 1) {
+      addTaperedCylinderBetween(
+        group,
+        new THREE.Vector3(side * (body.shoulder + 0.252 + finger * 0.018) * scale, 2.28 * scale, -0.16 * scale),
+        new THREE.Vector3(side * (body.shoulder + 0.264 + finger * 0.014) * scale, 2.15 * scale, -0.17 * scale),
+        0.018 * scale,
+        0.012 * scale,
+        skin,
+        7
+      );
+    }
   }
-  addMesh(group, new THREE.CapsuleGeometry(0.11 * scale, 0.16 * scale, 8, 12), skin, [0, 4.43 * scale, 0]);
+  addMesh(group, new THREE.CapsuleGeometry(0.11 * scale, 0.18 * scale, 8, 12), skin, [0, 4.34 * scale, 0]);
   const headY = 4.84 * scale;
   const head = addMesh(group, new THREE.SphereGeometry(0.365 * scale, 28, 22), skin, [0, headY, 0]);
   head.scale.set(face.width, face.height, 0.94);
@@ -565,7 +594,8 @@ function shotCamera(shot, subject, controls, timelineDuration = 0) {
   const fov = THREE.MathUtils.radToDeg(2 * Math.atan(sensorHeight / (2 * focal)));
   const subjectHeight = Math.max(4, Number(subject?.height) || 5.9);
   const camera = cameraAtMotionProgress(shot.cam, controls.motionProgress, timelineDuration);
-  const focus = typeof controls.focus === "number" ? controls.focus : 0.84;
+  const focus = typeof controls.focus === "number" ? controls.focus : 0.9;
+  const tilt = clamp(Number(controls.tilt) || 0, -45, 45);
   const cameraHeight = Math.max(0.35, Number(camera?.height) || Number(shot.cam?.height) || 5.2);
   const cameraPosition = new THREE.Vector3(Number(camera?.x) || 0, cameraHeight, Number(camera?.y) || 0);
   const subjectTarget = subject
@@ -573,18 +603,20 @@ function shotCamera(shot, subject, controls, timelineDuration = 0) {
     : new THREE.Vector3(0, 2.7, 0);
   const trackToSubject = Boolean(shot.cam?.aim && shot.cam?.linkTo && subject);
   const heading = (Number(camera?.rot) || 0) * RAD;
+  const aimDistance = 10;
+  const verticalAimOffset = Math.tan(tilt * RAD) * aimDistance;
   const manualTarget = new THREE.Vector3(
-    cameraPosition.x + Math.sin(heading) * 10,
-    // Keep the plan’s heading as the horizontal eyeline, while using the
-    // chosen subject only for a natural vertical point of interest. This
-    // preserves manual camera direction without starting every preview on a
-    // flat, horizon-only line that pushes the performer out of frame.
-    subject ? subjectTarget.y : cameraHeight + (focus - 0.84) * 5,
-    cameraPosition.z - Math.cos(heading) * 10
+    cameraPosition.x + Math.sin(heading) * aimDistance,
+    // An unlinked plan camera starts level. Vertical framing is an explicit
+    // camera control, never an implicit side effect of a fallback performer.
+    cameraHeight + verticalAimOffset,
+    cameraPosition.z - Math.cos(heading) * aimDistance
   );
+  const trackedTarget = subjectTarget.clone();
+  trackedTarget.y += verticalAimOffset;
   // The 2D plan is the source of truth. A camera only tracks a performer when
   // Track To is explicitly enabled; otherwise its rot heading becomes the 3D eyeline.
-  const target = trackToSubject ? subjectTarget : manualTarget;
+  const target = trackToSubject ? trackedTarget : manualTarget;
   const plannedRadius = Math.hypot(cameraPosition.x - target.x, cameraPosition.z - target.z);
   const baseRadius = plannedRadius || 10;
   const radius = Math.max(2.5, baseRadius * (1 + (Number(controls.dolly) || 0) / 100));
@@ -598,7 +630,24 @@ function shotCamera(shot, subject, controls, timelineDuration = 0) {
     Math.max(0.35, cameraHeight + (Number(controls.raise) || 0)),
     target.z + Math.cos(angle) * radius
   );
-  return { fov: clamp(fov, 12, 95), position, target, focal, distance: position.distanceTo(target) };
+  return {
+    fov: clamp(fov, 12, 95),
+    position,
+    target,
+    focal,
+    distance: position.distanceTo(target),
+    tilt,
+    trackToSubject,
+  };
+}
+
+// Keep the camera's physical eyeline neutral while shifting the image plane up
+// to a standard headroom composition. This is an optical framing adjustment,
+// not an implicit pitch: low/high-angle behavior remains an explicit preset or
+// vertical-aim control.
+function applyCinematicComposition(camera, frame) {
+  const verticalOffset = Math.round(frame.height * 0.2);
+  camera.setViewOffset(frame.width, frame.height, 0, verticalOffset, frame.width, frame.height);
 }
 
 function projectPoint(point, framing, width, height) {
@@ -944,6 +993,7 @@ export function renderPrevisFrame({ shot, objects, walls = [], openings = [], wi
     camera.aspect = frame.aspect;
     camera.position.copy(framing.position);
     camera.lookAt(framing.target);
+    applyCinematicComposition(camera, frame);
     camera.updateProjectionMatrix();
     renderer.setScissorTest(false);
     renderer.setClearColor("#02060a", 1);
@@ -982,11 +1032,13 @@ export default function PrevisWindow({
   const controlsRef = useRef(defaultControls(shot));
   const dragRef = useRef(null);
   const motionFrameRef = useRef(null);
+  const wheelCommitRef = useRef(null);
   const [controls, setControls] = useState(() => defaultControls(shot));
   const [frameBox, setFrameBox] = useState(null);
   const [fallback, setFallback] = useState(false);
   const [activePreset, setActivePreset] = useState(() => shot?.cam?.previsPreset || "shot");
   const [motionPlaying, setMotionPlaying] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const persistTransactionRef = useRef(false);
   const subject = useMemo(() => subjectForShot(shot, objects), [shot, objects]);
   const actorCount = objects.filter((object) => object.type === "actor").length;
@@ -1075,6 +1127,7 @@ export default function PrevisWindow({
 
   useEffect(() => () => {
     if (motionFrameRef.current) cancelAnimationFrame(motionFrameRef.current);
+    if (wheelCommitRef.current) window.clearTimeout(wheelCommitRef.current);
   }, []);
 
   useEffect(() => {
@@ -1145,6 +1198,7 @@ export default function PrevisWindow({
         camera.fov = nextFraming.fov;
         camera.position.copy(nextFraming.position);
         camera.lookAt(nextFraming.target);
+        applyCinematicComposition(camera, frame);
         camera.updateProjectionMatrix();
         renderer.render(sceneState.scene, camera);
         renderer.setScissorTest(false);
@@ -1166,15 +1220,15 @@ export default function PrevisWindow({
     };
   }, [choreographyDuration, fallback, objects, walls, openings, shot, subject]);
 
-  const beginCameraUpdate = () => {
+  const beginCameraUpdate = useCallback(() => {
     if (persistTransactionRef.current || !shot?.cam?.id) return;
     persistTransactionRef.current = true;
     onBeginCameraUpdate?.(shot.cam.id);
-  };
+  }, [onBeginCameraUpdate, shot?.cam?.id]);
 
-  const finishCameraUpdate = () => {
+  const finishCameraUpdate = useCallback(() => {
     persistTransactionRef.current = false;
-  };
+  }, []);
 
   const updateControls = (fields, preset = "custom") => {
     const next = { ...controlsRef.current, ...fields };
@@ -1209,27 +1263,95 @@ export default function PrevisWindow({
     setMotionPlaying(true);
   };
 
+  const finishPointerDrag = useCallback((event) => {
+    const activeDrag = dragRef.current;
+    if (!activeDrag) return;
+    if (event?.pointerId != null && event.pointerId !== activeDrag.pointerId) return;
+    const target = event?.currentTarget;
+    if (target?.hasPointerCapture?.(activeDrag.pointerId)) {
+      target.releasePointerCapture(activeDrag.pointerId);
+    }
+    dragRef.current = null;
+    setIsDragging(false);
+    finishCameraUpdate();
+  }, [finishCameraUpdate]);
+
+  useEffect(() => {
+    const abandonPointerDrag = () => finishPointerDrag();
+    window.addEventListener("pointerup", abandonPointerDrag);
+    window.addEventListener("pointercancel", abandonPointerDrag);
+    window.addEventListener("blur", abandonPointerDrag);
+    return () => {
+      window.removeEventListener("pointerup", abandonPointerDrag);
+      window.removeEventListener("pointercancel", abandonPointerDrag);
+      window.removeEventListener("blur", abandonPointerDrag);
+    };
+  }, [finishPointerDrag]);
+
   const onPointerDown = (event) => {
+    if (event.button !== 0 || event.isPrimary === false) return;
     setMotionPlaying(false);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { x: event.clientX, y: event.clientY };
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      origin: {
+        orbit: controlsRef.current.orbit,
+        raise: controlsRef.current.raise,
+      },
+      active: false,
+    };
   };
   const onPointerMove = (event) => {
-    if (!dragRef.current) return;
-    const dx = event.clientX - dragRef.current.x;
-    const dy = event.clientY - dragRef.current.y;
-    dragRef.current = { x: event.clientX, y: event.clientY };
-    if (!dx && !dy) return;
-    beginCameraUpdate();
+    const activeDrag = dragRef.current;
+    if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
+    if ((event.buttons & 1) === 0) {
+      finishPointerDrag(event);
+      return;
+    }
+    const dx = event.clientX - activeDrag.startX;
+    const dy = event.clientY - activeDrag.startY;
+    if (!activeDrag.active && Math.hypot(dx, dy) < 5) return;
+    if (!activeDrag.active) {
+      dragRef.current = { ...activeDrag, active: true };
+      setIsDragging(true);
+      beginCameraUpdate();
+    }
     updateControls({
-      orbit: clamp(controlsRef.current.orbit - dx * 0.32, -155, 155),
-      raise: clamp(controlsRef.current.raise + dy * 0.025, -4, 11),
+      orbit: clamp(activeDrag.origin.orbit - dx * 0.24, -155, 155),
+      raise: clamp(activeDrag.origin.raise + dy * 0.022, -4, 11),
     });
   };
-  const onPointerUp = () => {
-    dragRef.current = null;
-    finishCameraUpdate();
-  };
+  const onPointerUp = finishPointerDrag;
+
+  const onWheel = useCallback((event) => {
+    if (!event.deltaY) return;
+    event.preventDefault();
+    setMotionPlaying(false);
+    beginCameraUpdate();
+    const next = {
+      ...controlsRef.current,
+      dolly: clamp(controlsRef.current.dolly + event.deltaY * 0.055, -60, 80),
+    };
+    controlsRef.current = next;
+    setActivePreset("custom");
+    setControls(next);
+    if (shot?.cam?.id) onUpdateCamera?.(shot.cam.id, cameraFieldsForControls(next, "custom"), false);
+    if (wheelCommitRef.current) window.clearTimeout(wheelCommitRef.current);
+    wheelCommitRef.current = window.setTimeout(() => {
+      finishCameraUpdate();
+      wheelCommitRef.current = null;
+    }, 180);
+  }, [beginCameraUpdate, finishCameraUpdate, onUpdateCamera, shot?.cam?.id]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onWheel);
+  }, [fallback, onWheel]);
 
   const activeAspect = aspectRatioFor(controls.aspect);
   const previewStageStyle = frameBox
@@ -1272,8 +1394,17 @@ export default function PrevisWindow({
         </header>
 
         <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div ref={stageRef} className="relative min-h-[21rem] overflow-hidden bg-[#02060a] lg:min-h-[34rem]" data-testid="previs-render-stage">
-            <div className="absolute overflow-hidden" style={previewStageStyle} data-testid="previs-aspect-frame">
+          <div
+            ref={stageRef}
+            className="relative min-h-[21rem] overflow-hidden lg:h-[34rem] lg:min-h-[34rem]"
+            style={{ background: "#07131e" }}
+            data-testid="previs-render-stage"
+          >
+            <div
+              className="absolute overflow-hidden rounded-sm"
+              style={{ ...previewStageStyle, boxShadow: "0 16px 48px rgba(0, 0, 0, 0.42)" }}
+              data-testid="previs-aspect-frame"
+            >
               <canvas
                 key={fallback ? "cinematic-canvas" : "three-renderer"}
                 ref={canvasRef}
@@ -1281,8 +1412,13 @@ export default function PrevisWindow({
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
+                onLostPointerCapture={onPointerUp}
+                onContextMenu={(event) => event.preventDefault()}
+                onPointerLeave={(event) => {
+                  if (event.buttons === 0) finishPointerDrag(event);
+                }}
                 className="absolute inset-0 h-full w-full touch-none"
-                style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+                style={{ cursor: isDragging ? "grabbing" : "grab" }}
                 data-testid="canvas-3d-previs"
               />
               <div className="pointer-events-none absolute inset-6 border" style={{ borderColor: "rgba(241, 175, 76, 0.5)" }} />
@@ -1294,17 +1430,17 @@ export default function PrevisWindow({
                 {fallback ? "CINEMATIC CANVAS" : "LIVE 3D"} · {activeAspect.label} · {activePreset === "custom" ? "CUSTOM VIEW" : activePreset.toUpperCase()}
               </div>
               <div className="absolute bottom-4 left-4 rounded-md px-3 py-2 text-xs" style={{ background: "rgba(5, 15, 23, 0.82)", color: palette.dim, border: `1px solid ${palette.rule}` }}>
-                Drag to orbit and crane · Lens {Math.round(controls.focal)}mm · Focus {Math.round(controls.focus * 100)}%
+                Drag: orbit / crane · Scroll: dolly · {framing.trackToSubject ? `Track ${subject?.name || "subject"}` : `Plan heading · ${Math.round(controls.tilt)}° vertical aim`}
               </div>
             </div>
           </div>
 
-          <aside className="max-h-[42vh] overflow-y-auto p-4 lg:max-h-none" style={{ borderLeft: `1px solid ${palette.rule}` }}>
+          <aside className="max-h-[42vh] overflow-y-auto p-4 lg:h-[34rem] lg:max-h-[34rem]" style={{ borderLeft: `1px solid ${palette.rule}` }}>
             <section>
               <p className="text-xs uppercase tracking-[0.17em]" style={{ color: palette.dim }}>Camera package</p>
               <p className="mt-1 text-lg font-semibold" style={{ color: palette.amber }}>{Math.round(controls.focal)}mm · {shot.cam.sensor}</p>
               <p className="mt-1 text-xs leading-relaxed" style={{ color: palette.dim }}>
-                {shot.height} · {shot.rel || "unlinked"} · {toFixed(framing.distance)} ft to focus
+                {shot.height} · {framing.trackToSubject ? `tracking ${subject?.name || "subject"}` : "plan heading"} · {toFixed(framing.distance)} ft to aim point
               </p>
             </section>
 
@@ -1476,12 +1612,31 @@ export default function PrevisWindow({
                 />
               </label>
               <label className="block text-xs" style={{ color: palette.text }}>
-                Focus height <span style={{ color: palette.dim }}>{Math.round(controls.focus * 100)}%</span>
+                Vertical aim <span style={{ color: palette.dim }}>{Math.round(controls.tilt)}°</span>
+                <input
+                  aria-label="Vertical camera aim"
+                  type="range"
+                  min="-45"
+                  max="45"
+                  step="1"
+                  value={controls.tilt}
+                  onPointerDown={beginCameraUpdate}
+                  onKeyDown={beginCameraUpdate}
+                  onPointerUp={finishCameraUpdate}
+                  onKeyUp={finishCameraUpdate}
+                  onBlur={finishCameraUpdate}
+                  onChange={(event) => updateControls({ tilt: +event.target.value })}
+                  className="mt-2 w-full"
+                />
+              </label>
+              {framing.trackToSubject && (
+              <label className="block text-xs" style={{ color: palette.text }}>
+                Subject focus <span style={{ color: palette.dim }}>{Math.round(controls.focus * 100)}%</span>
                 <input
                   aria-label="Focus height"
                   type="range"
                   min="0.15"
-                  max="0.9"
+                  max="0.95"
                   step="0.01"
                   value={controls.focus}
                   onPointerDown={beginCameraUpdate}
@@ -1493,15 +1648,17 @@ export default function PrevisWindow({
                   className="mt-2 w-full"
                 />
               </label>
+              )}
             </section>
 
             <button
               type="button"
               onClick={() => applyPreset(framingPresets[0])}
+              data-testid="button-previs-reset-shot"
               className="mt-5 min-h-10 w-full rounded-md text-sm font-medium"
               style={{ color: palette.text, border: `1px solid ${palette.rule}`, background: palette.night }}
             >
-              Reset to shot camera
+              Reset neutral shot camera
             </button>
             <p className="mt-2 text-center text-[11px]" style={{ color: palette.cyan }} data-testid="status-previs-camera-save">
               Saved to Camera {shot.camLetter || shot.cam?.name || ""}

@@ -540,6 +540,7 @@ export default function BlockingBoard() {
   const [wallTool, setWallTool] = useState("select");
   const [wallDraft, setWallDraft] = useState(null);
   const [wallHover, setWallHover] = useState(null);
+  const [wallChainMode, setWallChainMode] = useState(false);
   const [snap, setSnap] = useState({ grid: true, nodes: true, lines: true, angles: true });
   const [wallDefaults, setWallDefaults] = useState({ thickness: 0.32, style: "solid" });
   const [blueprint, setBlueprint] = useState(null);
@@ -839,6 +840,7 @@ export default function BlockingBoard() {
         setSelectedOpening(null);
         setWallDraft(null);
         setWallHover(null);
+        setWallChainMode(false);
         setWallTool("select");
         setPathEditCameraId(null);
         setPathEditActorId(null);
@@ -1409,9 +1411,66 @@ export default function BlockingBoard() {
     return true;
   };
 
+  const endWallDrawing = (nextTool = "select") => {
+    setWallTool(nextTool);
+    setWallDraft(null);
+    setWallHover(null);
+    setWallChainMode(false);
+  };
+
+  const beginWallDrawing = () => {
+    setSelected(null);
+    setSelectedWall(null);
+    setSelectedOpening(null);
+    setWallDraft(null);
+    setWallHover(null);
+    setWallChainMode(false);
+    setWallTool("wall");
+    setPane("setdesign");
+  };
+
+  const placeWallPoint = (point, keepChain = false) => {
+    const next = snapWorld(point, wallDraft);
+    setSelected(null);
+    setSelectedWall(null);
+    setSelectedOpening(null);
+    setPane("setdesign");
+    if (!wallDraft) {
+      setWallDraft(next);
+      return;
+    }
+    if (dist(next, wallDraft) <= 0.15) return;
+
+    recordUndo("draw-wall");
+    setWalls((previous) => [
+      ...previous,
+      {
+        id: uid("w"),
+        a: { ...wallDraft },
+        b: { ...next },
+        thickness: wallDefaults.thickness,
+        style: wallDefaults.style,
+      },
+    ]);
+
+    if (keepChain) {
+      setWallDraft(next);
+      setWallHover(next);
+      return;
+    }
+
+    // A completed wall returns to the normal editing tool. Hold Shift while
+    // placing an endpoint when intentionally tracing a connected wall chain.
+    endWallDrawing();
+  };
+
   const onWallDown = (e, wall, mode = "select") => {
     e.stopPropagation();
     const point = toWorld(e);
+    if (wallTool === "wall") {
+      placeWallPoint(point, e.shiftKey || wallChainMode);
+      return;
+    }
     if (["door", "window", "opening"].includes(wallTool)) {
       addOpeningAt(wallTool, point, wall.id);
       return;
@@ -1472,27 +1531,7 @@ export default function BlockingBoard() {
       setPathEditActorId(null);
     }
     if (wallTool === "wall") {
-      const next = snapWorld(point, wallDraft);
-      setSelected(null);
-      setSelectedWall(null);
-      setSelectedOpening(null);
-      setPane("setdesign");
-      if (!wallDraft) {
-        setWallDraft(next);
-      } else if (dist(next, wallDraft) > 0.15) {
-        recordUndo("draw-wall");
-        setWalls((previous) => [
-          ...previous,
-          {
-            id: uid("w"),
-            a: { ...wallDraft },
-            b: { ...next },
-            thickness: wallDefaults.thickness,
-            style: wallDefaults.style,
-          },
-        ]);
-        setWallDraft(next);
-      }
+      placeWallPoint(point, e.shiftKey || wallChainMode);
       return;
     }
     if (["door", "window", "opening"].includes(wallTool)) {
@@ -1649,18 +1688,10 @@ export default function BlockingBoard() {
 
   const toggleWallTool = () => {
     if (wallTool === "wall") {
-      setWallTool("select");
-      setWallDraft(null);
-      setWallHover(null);
+      endWallDrawing();
       return;
     }
-    setSelected(null);
-    setSelectedWall(null);
-    setSelectedOpening(null);
-    setWallDraft(null);
-    setWallHover(null);
-    setWallTool("wall");
-    setPane("setdesign");
+    beginWallDrawing();
   };
 
   /* ---- adding things ---- */
@@ -1687,15 +1718,23 @@ export default function BlockingBoard() {
 
   const addCamera = () => {
     const c = centerOfView();
-    // Start a 35mm Super 35 camera at a workable medium-shot distance. Users
-    // can still place or move it anywhere afterward.
-    const o = newCamera(c.x, c.y - 9, String.fromCharCode(65 + cameras.length), { layerContext: layerMode });
+    // Start a 35mm Super 35 camera at a true medium-wide distance. At eye
+    // level, 20 ft leaves a full performer comfortably inside the Scope
+    // frame instead of cutting them at the lower matte. Users can still
+    // place or move it anywhere afterward. When performers are present, bind
+    // the new camera to the nearest one so its 2D FOV and 3D preview begin
+    // from the same deliberate target relationship.
+    const defaultCameraOffset = 20;
     const nearestActor = actors.reduce(
-      (nearest, actor) => (!nearest || dist(o, actor) < dist(o, nearest) ? actor : nearest),
+      (nearest, actor) => (!nearest || Math.hypot(c.x - actor.x, c.y - defaultCameraOffset - actor.y) < Math.hypot(c.x - nearest.x, c.y - defaultCameraOffset - nearest.y) ? actor : nearest),
       null
     );
+    const o = newCamera(c.x, c.y - defaultCameraOffset, String.fromCharCode(65 + cameras.length), {
+      layerContext: layerMode,
+      linkTo: nearestActor?.id || null,
+      aim: Boolean(nearestActor),
+    });
     if (nearestActor) o.rot = Math.round(headingOf(nearestActor.x - o.x, nearestActor.y - o.y));
-    o.aim = false;
     recordUndo("add");
     setObjects((p) => [...p, o]);
     setSelected(o.id);
@@ -2235,7 +2274,7 @@ ${previs}
           </div>
         </div>
         <Btn onClick={addActor}>Add performer</Btn>
-        <Btn onClick={addCamera}>Add camera</Btn>
+        <Btn onClick={addCamera} data-testid="button-add-camera">Add camera</Btn>
         <Btn
           onClick={() => {
             const currentShot = shots.at(-1);
@@ -3038,7 +3077,7 @@ ${previs}
           >
             {wallTool === "wall"
               ? wallDraft
-                ? "Tap the next point to continue the wall. Esc or Finish ends the chain."
+                ? "Tap to complete this wall. Hold Shift, or enable Connected chain, to continue."
                 : "Wall tool: tap a point to begin. Grid, node, line, and 45° / 90° snap are active."
               : ["door", "window", "opening"].includes(wallTool)
               ? `Place ${wallTool === "opening" ? "a wall opening" : `a ${wallTool}`} on a wall.`
@@ -3295,7 +3334,7 @@ ${previs}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <Btn onClick={() => { setWallTool("select"); setWallDraft(null); }} active={wallTool === "select"}>
+                  <Btn onClick={() => endWallDrawing()} active={wallTool === "select"}>
                     Select / edit
                   </Btn>
                   <Btn
@@ -3307,13 +3346,13 @@ ${previs}
                   >
                     Draw walls: {wallTool === "wall" ? "on" : "off"}
                   </Btn>
-                  <Btn onClick={() => { setWallTool("door"); setWallDraft(null); }} active={wallTool === "door"}>
+                  <Btn onClick={() => endWallDrawing("door")} active={wallTool === "door"}>
                     Add door
                   </Btn>
-                  <Btn onClick={() => { setWallTool("window"); setWallDraft(null); }} active={wallTool === "window"}>
+                  <Btn onClick={() => endWallDrawing("window")} active={wallTool === "window"}>
                     Add window
                   </Btn>
-                  <Btn onClick={() => { setWallTool("opening"); setWallDraft(null); }} active={wallTool === "opening"}>
+                  <Btn onClick={() => endWallDrawing("opening")} active={wallTool === "opening"}>
                     Wall opening
                   </Btn>
                   <Btn onClick={() => blueprintRef.current?.click()} active={!!blueprint}>
@@ -3324,11 +3363,21 @@ ${previs}
                 {wallTool === "wall" && (
                   <div className="flex items-center justify-between gap-2 rounded p-2" style={{ background: COLORS.ink, border: `1px solid ${COLORS.rule}` }}>
                     <span className="text-xs" style={{ color: COLORS.dim }}>
-                      {wallDraft ? "Chain in progress" : "Ready for first point"}
+                      {wallDraft ? "Endpoint ready" : "One wall per activation"}
                     </span>
-                    <Btn onClick={() => { setWallDraft(null); setWallHover(null); }} disabled={!wallDraft}>
-                      Finish wall
-                    </Btn>
+                    <div className="flex items-center gap-1">
+                      <Btn
+                        onClick={() => setWallChainMode((current) => !current)}
+                        active={wallChainMode}
+                        aria-pressed={wallChainMode}
+                        data-testid="button-wall-chain-mode"
+                      >
+                        Connected chain: {wallChainMode ? "on" : "off"}
+                      </Btn>
+                      <Btn onClick={() => endWallDrawing()} disabled={!wallDraft}>
+                        Cancel wall
+                      </Btn>
+                    </div>
                   </div>
                 )}
 
@@ -3417,7 +3466,7 @@ ${previs}
                   <div className="rounded p-3 text-xs leading-relaxed" style={{ background: COLORS.panelHi, color: COLORS.dim, border: `1px solid ${COLORS.rule}` }}>
                     {walls.length
                       ? `${walls.length} wall segment${walls.length === 1 ? "" : "s"} and ${openings.length} hosted opening${openings.length === 1 ? "" : "s"}. Tap a wall to move its endpoints or midpoint.`
-                      : "Start with Draw walls, tap each exterior corner in sequence, then press Finish wall. Select a wall and use Extrude to pull an interior branch."}
+                      : "Start with Draw walls, tap a start point and an endpoint. Hold Shift or turn on Connected chain only when you want to continue a connected wall. Select a wall and use Extrude to pull an interior branch."}
                   </div>
                 )}
 
@@ -3430,7 +3479,7 @@ ${previs}
                           {wallLength(selectedWallData).toFixed(1)} ft · {wallAngle(selectedWallData).toFixed(0)}°
                         </div>
                       </div>
-                      <Btn onClick={() => { setSelectedWall(null); setWallTool("select"); }}>Done</Btn>
+                      <Btn onClick={() => { setSelectedWall(null); endWallDrawing(); }}>Done</Btn>
                     </div>
                     <Field label={`Thickness ${Number(selectedWallData.thickness || 0.32).toFixed(2)} ft`}>
                       <input
@@ -3454,8 +3503,11 @@ ${previs}
                       <Btn
                         onClick={() => {
                           const midpoint = wallPoint(selectedWallData, 0.5);
+                          setSelected(null);
+                          setSelectedOpening(null);
                           setWallDraft(midpoint);
                           setWallHover(null);
+                          setWallChainMode(false);
                           setWallTool("wall");
                         }}
                         accent
@@ -3513,7 +3565,7 @@ ${previs}
                       </div>
                     )}
                     <div className="grid grid-cols-2 gap-2">
-                      <Btn onClick={() => setWallTool(selectedOpeningData.type === "opening" ? "opening" : selectedOpeningData.type)} active>
+                      <Btn onClick={() => endWallDrawing(selectedOpeningData.type === "opening" ? "opening" : selectedOpeningData.type)} active>
                         Slide on wall
                       </Btn>
                       <Btn onClick={() => removeOpening(selectedOpeningData.id)} danger>
