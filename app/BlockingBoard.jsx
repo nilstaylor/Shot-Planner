@@ -572,6 +572,7 @@ export default function BlockingBoard() {
   const svgRef = useRef(null);
   const drag = useRef(null);
   const longPress = useRef(null);
+  const contextMenuRef = useRef(null);
   const fileRef = useRef(null);
   const pngRef = useRef(null);
   const blueprintRef = useRef(null);
@@ -854,9 +855,12 @@ export default function BlockingBoard() {
 
   useEffect(() => {
     if (!contextMenu) return undefined;
-    const closeMenu = () => setContextMenu(null);
-    window.addEventListener("pointerdown", closeMenu);
-    return () => window.removeEventListener("pointerdown", closeMenu);
+    const closeMenuOnOutsidePointerDown = (event) => {
+      if (contextMenuRef.current?.contains(event.target)) return;
+      setContextMenu(null);
+    };
+    window.addEventListener("pointerdown", closeMenuOnOutsidePointerDown);
+    return () => window.removeEventListener("pointerdown", closeMenuOnOutsidePointerDown);
   }, [contextMenu]);
 
   const toWorld = useCallback(
@@ -4374,6 +4378,7 @@ ${previs}
       </div>
       {contextMenu && byId[contextMenu.id] && (
         <div
+          ref={contextMenuRef}
           role="menu"
           aria-label={`${byId[contextMenu.id].type === "camera" ? "Camera" : "Performer"} controls`}
           data-testid={`context-menu-${byId[contextMenu.id].type}`}

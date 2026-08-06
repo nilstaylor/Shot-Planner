@@ -62,3 +62,13 @@ test("a newly added camera starts with the same performer target in 2D and 3D", 
   assert.match(source, /aim: Boolean\(nearestActor\)/);
   assert.match(source, /if \(nearestActor\) o\.rot = Math\.round\(headingOf\(nearestActor\.x - o\.x, nearestActor\.y - o\.y\)\)/);
 });
+
+test("context-menu actions remain available while outside clicks close the menu", async () => {
+  const source = await readFile(boardUrl, "utf8");
+
+  assert.match(source, /const contextMenuRef = useRef\(null\)/);
+  assert.match(source, /const closeMenuOnOutsidePointerDown = \(event\) => \{\s*if \(contextMenuRef\.current\?\.contains\(event\.target\)\) return;\s*setContextMenu\(null\);/);
+  assert.match(source, /window\.addEventListener\("pointerdown", closeMenuOnOutsidePointerDown\)/);
+  assert.match(source, /ref=\{contextMenuRef\}\s+role="menu"/);
+  assert.match(source, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
+});
